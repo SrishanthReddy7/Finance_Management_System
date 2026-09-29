@@ -1,0 +1,12 @@
+node_modules/
+.env
+uploads/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Environment variables
+.env
+.env.*
+!.env.example

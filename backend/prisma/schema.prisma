@@ -1,0 +1,1449 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                 @id @default(uuid())
+  email                String                 @unique
+  passwordHash         String
+  roleType             RoleType               @default(USER)
+  roleId               String?
+  status               AccountStatus          @default(PENDING)
+  createdById          String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  failedLoginAttempts  Int                    @default(0)
+  lockedUntil          DateTime?
+  auditLogs            AuditLog[]
+  employee             Employee?
+  ExpenseReceipt       ExpenseReceipt[]
+  invoiceDocuments     InvoiceDocument[]
+  notifications        Notification[]
+  RefreshToken         RefreshToken[]
+  ReimbursementPayment ReimbursementPayment[]
+  createdBy            User?                  @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers         User[]                 @relation("UserCreatedBy")
+  role                 Role?                  @relation(fields: [roleId], references: [id])
+
+  @@index([roleId])
+  @@index([createdById])
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       User[]
+}
+
+model Permission {
+  id    String           @id @default(uuid())
+  code  String           @unique
+  label String
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Department {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  code        String?    @unique
+  description String?
+  isActive    Boolean    @default(true)
+  budgets     Budget[]
+  employees   Employee[]
+}
+
+model Employee {
+  id               String                  @id @default(uuid())
+  userId           String                  @unique
+  firstName        String
+  lastName         String
+  designation      String
+  departmentId     String?
+  managerId        String?
+  dateOfJoining    DateTime
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  employeeCode     String                  @unique
+  phone            String?
+  status           EmploymentStatus        @default(ACTIVE)
+  department       Department?             @relation(fields: [departmentId], references: [id])
+  manager          Employee?               @relation("ManagerChain", fields: [managerId], references: [id])
+  directReports    Employee[]              @relation("ManagerChain")
+  user             User                    @relation(fields: [userId], references: [id])
+  expenseClaims    ExpenseClaim[]
+  payslips         Payslip[]
+  managedProjects  Project[]               @relation("ProjectManaged")
+  projectMembers   ProjectMember[]
+  salaryStructures SalaryStructure[]
+  // Payout Subsystem Stage 1: an employee's payout-destination history.
+  // "At most one active at a time" is a service-layer rule, not a DB
+  // constraint -- same reasoning PayrollRun gives for not using
+  // @@unique([periodMonth, periodYear]): a filtered/partial unique index
+  // can't be expressed as a plain Prisma @@unique, and a deactivated old
+  // account must never block adding its replacement. Old rows are
+  // deactivated (isActive = false), never deleted, so Payout rows that
+  // already reference them keep a valid, historically accurate FK.
+  payoutAccounts   EmployeePayoutAccount[]
+
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([status])
+}
+
+model SalaryStructure {
+  id            String            @id @default(uuid())
+  employeeId    String
+  effectiveFrom DateTime
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  components    SalaryComponent[]
+  employee      Employee          @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+model SalaryComponent {
+  id          String              @id @default(uuid())
+  structureId String
+  label       String
+  type        SalaryComponentType
+  amount      Decimal             @db.Decimal(12, 2)
+  structure   SalaryStructure     @relation(fields: [structureId], references: [id])
+
+  @@index([structureId])
+}
+
+model Payslip {
+  id                 String        @id @default(uuid())
+  employeeId         String
+  periodMonth        Int
+  periodYear         Int
+  grossEarnings      Decimal       @db.Decimal(12, 2)
+  totalDeductions    Decimal       @db.Decimal(12, 2)
+  netSalary          Decimal       @db.Decimal(12, 2)
+  paymentStatus      PaymentStatus @default(PENDING)
+  generatedAt        DateTime      @default(now())
+  // Which batch generated this snapshot (FRS 12.1 "Payroll Period" as a
+  // first-class run, added for the maker-checker workflow). Nullable so a
+  // payslip is never orphaned if its run row is ever queried away -- in
+  // practice every payslip this module creates always has one.
+  payrollRunId       String?
+  payrollRun         PayrollRun?   @relation(fields: [payrollRunId], references: [id])
+  // FRS Section 20's payment shape (date/method/reference), applied to the
+  // third payment direction alongside ClientPayment/VendorPayment. A payslip
+  // is paid as one lump sum, so this lives directly on it rather than a
+  // separate payments table.
+  paidAt             DateTime?
+  paymentMethod      String?
+  paymentReferenceNo String?
+  employee           Employee      @relation(fields: [employeeId], references: [id])
+  lines              PayslipLine[]
+  // Payout Subsystem Stage 1: at most one payout per payslip (a payslip is
+  // paid as one lump sum, same reasoning paymentReferenceNo above already
+  // documents) -- enforced by @unique on Payout.payslipId, not here.
+  payout             Payout?
+
+  @@unique([employeeId, periodMonth, periodYear])
+  @@index([employeeId])
+  @@index([payrollRunId])
+}
+
+// FRS 12.1 "Payroll Period" + Section 10 "Payroll" module, extended with a
+// maker-checker approval step. Not in the FRS's own illustrative schema
+// (Section 12.2 describes a single-step "Finance triggers payslip
+// generation"), but this is the batch header FRS 29.3's `POST
+// /payroll/generate` implicitly needs one run per period, and gives the
+// duplicate-processing guard and the finalize/lock behaviour a home instead
+// of trying to encode both on Payslip itself.
+enum PayrollRunStatus {
+  DRAFT
+  PROCESSED
+  FINALIZED
+  PAID
+  CANCELLED
+}
+
+model PayrollRun {
+  id            String           @id @default(uuid())
+  periodMonth   Int
+  periodYear    Int
+  status        PayrollRunStatus @default(DRAFT)
+  // Maker-checker (mirrored from Invoice/VendorBill's creator != approver
+  // rule): finalizeRun compares the approver against preparedById, so it has
+  // to be a stored column, not just an ApprovalStep entry.
+  preparedById  String
+  processedById String?
+  processedAt   DateTime?
+  finalizedById String?
+  finalizedAt   DateTime?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  payslips      Payslip[]
+
+  // No @@unique([periodMonth, periodYear]): a CANCELLED run must not
+  // permanently block a fresh attempt at that period, and Postgres unique
+  // constraints can't be conditioned on status. The "no duplicate active run
+  // for a period" rule is therefore enforced in the service, the same way
+  // Budget's duplicate check excludes CLOSED and VendorBill's excludes
+  // CANCELLED/REJECTED.
+  @@index([periodYear, periodMonth])
+  @@index([status])
+}
+
+model PayslipLine {
+  id        String              @id @default(uuid())
+  payslipId String
+  label     String
+  type      SalaryComponentType
+  amount    Decimal             @db.Decimal(12, 2)
+  payslip   Payslip             @relation(fields: [payslipId], references: [id])
+
+  @@index([payslipId])
+}
+
+model ExpenseCategory {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  isActive  Boolean        @default(true)
+  // FRS 11.3 "Expense limits": per-category soft limit (warns the approver)
+  // and hard limit (blocks submission). Nullable = no limit configured.
+  softLimit Decimal?       @db.Decimal(12, 2)
+  hardLimit Decimal?       @db.Decimal(12, 2)
+  claims    ExpenseClaim[]
+}
+
+model ExpenseClaim {
+  id                   String           @id @default(uuid())
+  employeeId           String
+  categoryId           String
+  projectId            String?
+  amount               Decimal          @db.Decimal(12, 2)
+  expenseDate          DateTime
+  purpose              String
+  paymentMethod        String
+  receiptMissing       Boolean          @default(false)
+  status               ExpenseStatus    @default(DRAFT)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  isRecurring          Boolean          @default(false)
+  receiptMissingReason String?
+  recurringPeriod      RecurringPeriod?
+  category             ExpenseCategory  @relation(fields: [categoryId], references: [id])
+  employee             Employee         @relation(fields: [employeeId], references: [id])
+  project              Project?         @relation(fields: [projectId], references: [id])
+  receipts             ExpenseReceipt[]
+  reimbursement        Reimbursement?
+
+  @@index([employeeId])
+  @@index([categoryId])
+  @@index([projectId])
+  @@index([status])
+}
+
+model ExpenseReceipt {
+  id               String       @id @default(uuid())
+  expenseClaimId   String
+  uploadedAt       DateTime     @default(now())
+  checksum         String?
+  mimeType         String
+  originalFileName String
+  sizeBytes        Int
+  storageKey       String       @unique
+  uploadedById     String?
+  expenseClaim     ExpenseClaim @relation(fields: [expenseClaimId], references: [id], onDelete: Cascade)
+  User             User?        @relation(fields: [uploadedById], references: [id])
+
+  @@index([expenseClaimId])
+  @@index([checksum])
+}
+
+model Reimbursement {
+  id                   String                 @id @default(uuid())
+  expenseClaimId       String                 @unique
+  amount               Decimal                @db.Decimal(12, 2)
+  paymentStatus        PaymentStatus          @default(PENDING)
+  paidAt               DateTime?
+  referenceNo          String?
+  // FRS Section 38 Q14 (answered): payouts happen by bank transfer or petty
+  // cash. Null until Finance actually records the payment.
+  method               ReimbursementMethod?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  totalPaid            Decimal                @default(0) @db.Decimal(12, 2)
+  expenseClaim         ExpenseClaim           @relation(fields: [expenseClaimId], references: [id])
+  ReimbursementPayment ReimbursementPayment[]
+  // Payout Subsystem Stage 1: at most one payout per reimbursement, enforced
+  // by @unique on Payout.reimbursementId. Reimbursement.paymentStatus/paidAt
+  // stay Finance's own authorization/payment record (FRS 11.1 steps 7-8,
+  // still set directly by processReimbursement today); Payout is the
+  // separate, later concept of provider-confirmed money movement -- the two
+  // are not merged.
+  payout               Payout?
+}
+
+model Client {
+  id             String       @id @default(uuid())
+  name           String
+  contactEmail   String?
+  contactPhone   String?
+  billingAddress String?
+  gstin          String?
+  paymentTerms   String?
+  currency       String       @default("INR")
+  status         ClientStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  invoices       Invoice[]
+  projects       Project[]
+}
+
+model Project {
+  id               String             @id @default(uuid())
+  name             String
+  clientId         String
+  projectManagerId String?
+  contractValue    Decimal?           @db.Decimal(14, 2)
+  billingModel     BillingModel
+  status           ProjectStatus      @default(PLANNED)
+  startDate        DateTime
+  endDate          DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  budgets          Budget[]
+  expenseClaims    ExpenseClaim[]
+  invoices         Invoice[]
+  client           Client             @relation(fields: [clientId], references: [id])
+  projectManager   Employee?          @relation("ProjectManaged", fields: [projectManagerId], references: [id])
+  members          ProjectMember[]
+  milestones       ProjectMilestone[]
+  vendorBills      VendorBill[]
+
+  @@index([clientId])
+  @@index([projectManagerId])
+  @@index([status])
+}
+
+// FRS 13.3: Milestone billing is "fixed price split across defined delivery
+// milestones, each invoiced on completion" -- which needs milestone records to
+// tie those invoices to. Section 38 Q22 (client-answered) makes Milestone the
+// billing model actually in use, so these are MVP, not Phase 2.
+model ProjectMilestone {
+  id          String          @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  amount      Decimal?        @db.Decimal(14, 2)
+  dueDate     DateTime?
+  status      MilestoneStatus @default(PENDING)
+  completedAt DateTime?
+  sequence    Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  project     Project         @relation(fields: [projectId], references: [id])
+  invoices    Invoice[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model ProjectMember {
+  id                String    @id @default(uuid())
+  projectId         String
+  employeeId        String
+  allocationPercent Int       @default(100)
+  startDate         DateTime
+  endDate           DateTime?
+  employee          Employee  @relation(fields: [employeeId], references: [id])
+  project           Project   @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, employeeId])
+  @@index([employeeId])
+}
+
+model Invoice {
+  id                  String               @id @default(uuid())
+  invoiceNumber       String               @unique
+  clientId            String
+  projectId           String?
+  // FRS 13.3 + Section 38 Q22: milestone billing is the model actually in use,
+  // and each milestone is "invoiced on completion" -- so an invoice has to be
+  // able to say WHICH milestone it billed. Optional, because Fixed Price,
+  // Retainer and T&M invoices have no milestone behind them.
+  milestoneId         String?
+  invoiceDate         DateTime
+  dueDate             DateTime
+  // FRS 14.1 "billing period" -- the service window an invoice covers, which
+  // is not the same as the date it was raised (a January retainer can be
+  // invoiced in February).
+  billingPeriodStart  DateTime?
+  billingPeriodEnd    DateTime?
+  // FRS 14.1 "payment terms". Snapshotted onto the invoice at creation rather
+  // than read live off the client, so changing a client's default terms later
+  // cannot silently rewrite what an already-issued invoice promised.
+  paymentTerms        String?
+  status              InvoiceStatus        @default(DRAFT)
+  totalAmount         Decimal              @db.Decimal(14, 2)
+  currency            String               @default("INR")
+  notes               String?
+  createdById         String
+  approvedById        String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  payments            ClientPayment[]
+  // Payment Gateway Stage 3: technical gateway-attempt records for this
+  // invoice. Does NOT replace/alter `payments` -- a PaymentTransaction only
+  // ever produces a ClientPayment once VERIFIED (Stage 2 design, Section B).
+  paymentTransactions PaymentTransaction[]
+  gstTransactions     GstTransaction[]
+  client              Client               @relation(fields: [clientId], references: [id])
+  project             Project?             @relation(fields: [projectId], references: [id])
+  milestone           ProjectMilestone?    @relation(fields: [milestoneId], references: [id])
+  lineItems           InvoiceLineItem[]
+  documents           InvoiceDocument[]
+
+  @@index([clientId])
+  @@index([projectId])
+  @@index([milestoneId])
+  @@index([status])
+  // The AR outstanding/aging reports (FRS 15.3) and the overdue sweep both
+  // filter on dueDate across the whole table, not within one client.
+  @@index([dueDate])
+}
+
+// FRS 14.1 "supporting documents". Deliberately the same shape as
+// ExpenseReceipt -- same storageKey/checksum/mimeType convention, same
+// out-of-web-root storage (Section 32) -- so one upload pattern covers both.
+model InvoiceDocument {
+  id               String   @id @default(uuid())
+  invoiceId        String
+  uploadedAt       DateTime @default(now())
+  checksum         String?
+  mimeType         String
+  originalFileName String
+  sizeBytes        Int
+  storageKey       String   @unique
+  uploadedById     String?
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  uploadedBy       User?    @relation(fields: [uploadedById], references: [id])
+
+  @@index([invoiceId])
+  @@index([checksum])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  rate        Decimal @db.Decimal(12, 2)
+  taxRate     Decimal @db.Decimal(5, 2)
+  discount    Decimal @default(0) @db.Decimal(12, 2)
+  lineTotal   Decimal @db.Decimal(14, 2)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model ClientPayment {
+  id                   String              @id @default(uuid())
+  invoiceId            String
+  amount               Decimal             @db.Decimal(14, 2)
+  paymentDate          DateTime
+  method               String
+  referenceNo          String?
+  // FRS Section 20 lists a note alongside amount/date/method/reference for
+  // both payment directions.
+  note                 String?
+  recordedAt           DateTime            @default(now())
+  invoice              Invoice             @relation(fields: [invoiceId], references: [id])
+  // Payment Gateway Stage 3: set only when this ClientPayment was produced
+  // from a VERIFIED PaymentTransaction (Stage 2 design, Section B/C) -- null
+  // for every manually recorded payment, which is every existing row and
+  // remains the default path. This is the ONLY foreign key between the two
+  // models, by design (Stage 2 correction, Section C): PaymentTransaction
+  // carries no clientPaymentId back-reference.
+  paymentTransactionId String?             @unique
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  // Stage 9 (Stage 8 design, approved): a confirmed payment may be refunded,
+  // in full or across several partial refunds -- see PaymentRefund below.
+  // ClientPayment itself gains no refund fields/status (Stage 8 decision 6/7);
+  // "how much has been refunded" is always derived by summing these rows,
+  // never stored here.
+  paymentRefunds       PaymentRefund[]
+
+  @@index([invoiceId])
+  @@index([paymentDate])
+}
+
+// Payment Gateway Stage 3 (Stage 2 design, Section B/C): the technical record
+// of one gateway attempt -- order created, customer redirected, gateway
+// reports an outcome. This is NOT money the company has recognized as
+// received; only a VERIFIED transaction may ever produce a ClientPayment
+// (Stage 2 design, Section F). An invoice may accumulate several of these
+// over time (retries, abandoned checkouts) without any of them affecting
+// Invoice.status/balance until one is verified and turns into a payment.
+model PaymentTransaction {
+  id               String                   @id @default(uuid())
+  invoiceId        String
+  invoice          Invoice                  @relation(fields: [invoiceId], references: [id])
+  provider         PaymentGatewayProvider   @default(RAZORPAY)
+  gatewayOrderId   String
+  gatewayPaymentId String?
+  // Stage 2 correction, Section J: always backend-computed as the invoice's
+  // current outstanding amount at order-creation time -- never accepted from
+  // the client. Enforced in the service layer in a later stage; the column
+  // itself just stores what was decided.
+  amount           Decimal                  @db.Decimal(14, 2)
+  // Stage 2 correction, Section J: must equal Invoice.currency at
+  // order-creation time (MVP has no FX/conversion) -- enforced in the service
+  // layer in a later stage.
+  currency         String
+  status           PaymentTransactionStatus @default(CREATED)
+  failureReason    String?
+  // Stage 2 correction, Section J: MVP payment initiation is
+  // Finance/application-initiated only, so this is the acting user who
+  // triggered order creation -- required, not nullable.
+  initiatedById    String
+  // Raw gateway fields worth keeping (method used, card network, etc.) that
+  // don't deserve their own column.
+  metadata         Json?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  // Inverse side only -- the owning foreign key is ClientPayment.paymentTransactionId.
+  clientPayment    ClientPayment?
+
+  // Stage 2 correction, Section E: plain unique constraints, not partial
+  // indexes -- Postgres allows multiple NULLs under a normal UNIQUE
+  // constraint, so gatewayPaymentId can stay null across many
+  // CREATED/PENDING rows and only becomes binding once a real value lands.
+  @@unique([provider, gatewayOrderId])
+  @@unique([provider, gatewayPaymentId])
+  @@index([invoiceId])
+  @@index([status])
+}
+
+// Payment Gateway Stage 3 (Stage 2 design, Section B/H): one durable row per
+// inbound webhook DELIVERY, keyed by the provider's own event id, so a
+// redelivered/duplicate webhook is recognized and short-circuited before any
+// PaymentTransaction/ClientPayment write is attempted. Deliberately NOT
+// foreign-keyed to PaymentTransaction (Stage 2 correction, Section 3):
+// webhooks can arrive out of order, so correlation happens via gateway
+// identifiers inside the handler in a later stage, not via a hard relation.
+model PaymentGatewayEvent {
+  id             String                 @id @default(uuid())
+  provider       PaymentGatewayProvider @default(RAZORPAY)
+  eventId        String
+  eventType      String
+  payload        Json
+  signatureValid Boolean
+  processedAt    DateTime?
+  createdAt      DateTime               @default(now())
+
+  @@unique([provider, eventId])
+  @@index([eventType])
+}
+
+// Payment Gateway Stage 9 (Stage 8 design, approved): the technical/business
+// record of one refund ATTEMPT against a confirmed ClientPayment -- mirrors
+// the PaymentTransaction/ClientPayment split (Stage 2/3), applied to money
+// going back out instead of coming in. Deliberately a SEPARATE model, not
+// fields on ClientPayment (Stage 8 decisions 1/6/7): ClientPayment stays
+// immutable, and a single payment can have several refunds over time (full,
+// or multiple partials), which a flat column set on ClientPayment could not
+// represent. "Refundable amount remaining" is always derived by the future
+// refund service as ClientPayment.amount minus the sum of this model's
+// PROCESSING + PROCESSED rows (Stage 8 decision 4/5) -- never stored here or
+// on ClientPayment. No relation is added from PaymentTransaction (Stage 8
+// design): a refund targets the ClientPayment/gatewayPaymentId that was
+// actually verified, not the order.
+//
+// NOTE (Stage 9 scope): only the schema/migration exists as of this model.
+// No refund service, route, webhook handling, permission, or business-rule
+// enforcement (amount checks, maker-checker, currency match) has been
+// implemented yet -- those are later stages, per the approved Stage 8 plan.
+model PaymentRefund {
+  id               String                 @id @default(uuid())
+  clientPaymentId  String
+  clientPayment    ClientPayment          @relation(fields: [clientPaymentId], references: [id])
+  provider         PaymentGatewayProvider @default(RAZORPAY)
+  // The Razorpay payment being refunded -- denormalized from
+  // ClientPayment.paymentTransaction.gatewayPaymentId (Stage 8 design) so the
+  // refund's own audit trail stays intact even if that relation chain is ever
+  // pruned. Not unique here: one payment can have several refunds against it.
+  gatewayPaymentId String
+  // Null until Razorpay accepts the refund request (Stage 8 decision 16: a
+  // refund is REQUESTED, as an app-side decision, before it is ever submitted
+  // to Razorpay) -- assigned once the gateway responds.
+  gatewayRefundId  String?
+  amount           Decimal                @db.Decimal(14, 2)
+  currency         String
+  status           PaymentRefundStatus    @default(REQUESTED)
+  reason           String?
+  failureReason    String?
+  metadata         Json?
+  // Who authorized this refund (the maker, Stage 8 decision 13/15) -- a later
+  // stage's maker-checker enforcement compares this against the user who
+  // submits it to Razorpay.
+  requestedById    String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  // Plain unique constraint, not a partial index (same reasoning as
+  // PaymentTransaction's provider+gatewayOrderId/gatewayPaymentId uniques,
+  // Stage 2 correction Section E): Postgres allows multiple NULLs under a
+  // normal UNIQUE constraint, so several REQUESTED refunds with no
+  // gatewayRefundId yet coexist freely, and the constraint only becomes
+  // binding once a real Razorpay refund id is assigned.
+  @@unique([provider, gatewayRefundId])
+  @@index([clientPaymentId])
+  @@index([status])
+}
+
+model Vendor {
+  id              String       @id @default(uuid())
+  name            String
+  // FRS 16.1 vendor types: cloud provider, software subscription, ISP,
+  // consultant, freelancer, office services, recruitment. Kept a String (not
+  // an enum) because Section 38 Q30 asks the client to "confirm/extend" that
+  // list -- an enum would need a migration every time they extend it, the same
+  // reasoning Section 11.2 gives for expense categories.
+  category        String
+  // FRS 16.1 "Details" + Section 31's Vendors page. Same contact/billing shape
+  // as Client, so one form and one validator cover both sides of the ledger.
+  contactEmail    String?
+  contactPhone    String?
+  billingAddress  String?
+  // FRS 16.1 "tax information" / FR-20 (GSTIN validated on entry). Drives the
+  // CGST+SGST vs IGST decision on this vendor's bills, exactly as Client.gstin
+  // does for invoices.
+  gstin           String?
+  // FRS 16.1 "services offered" -- free text, distinct from "category", which
+  // is the vendor TYPE.
+  servicesOffered String?
+  // FRS 16.1 "payment information": the terms agreed with the vendor, which a
+  // bill snapshots at creation (see VendorBill.paymentTerms).
+  paymentTerms    String?
+  currency        String       @default("INR")
+  // FRS 16.1 "bank information". Free text rather than parsed account/IFSC
+  // columns because the FRS never specifies its shape, and it is redacted from
+  // API responses for callers without MANAGE_VENDORS / RECORD_VENDOR_PAYMENT.
+  bankDetails     String?
+  status          VendorStatus @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bills           VendorBill[]
+
+  @@index([status])
+}
+
+model VendorBill {
+  id              String           @id @default(uuid())
+  // The vendor's OWN bill number, supplied by the caller -- unlike an invoice
+  // number, which this system issues. @@unique([vendorId, billNumber]) below is
+  // what stops the same bill being entered and paid twice.
+  billNumber      String
+  vendorId        String
+  // FRS 19: budget "actual spending" is the sum of expenses, vendor bills and
+  // salary allocations "tagged to that scope", and a scope can be a PROJECT.
+  // Optional, because most vendor bills (cloud, ISP, office services) are
+  // company overhead belonging to no single project.
+  projectId       String?
+  billDate        DateTime
+  dueDate         DateTime
+  // FRS 16.2 verification is "Finance checks against contract/PO". Section 38
+  // Q31 (is there a PO step?) is unanswered, so this records the reference
+  // Finance checked against without modelling a PurchaseOrder entity, which
+  // Section 16.3 calls a Phase 2 candidate.
+  poReference     String?
+  // Snapshotted off the vendor at creation, for the same reason Invoice does
+  // it: changing a vendor's default terms later must not rewrite what an
+  // already-entered bill agreed to.
+  paymentTerms    String?
+  status          VendorBillStatus @default(DRAFT)
+  totalAmount     Decimal          @db.Decimal(14, 2)
+  currency        String           @default("INR")
+  notes           String?
+  // Maker-checker (FRS Section 26 rule 5, mirrored onto AP): approveVendorBill
+  // compares the approver against this column, so it has to be stored.
+  // Plain String columns with no relation, matching Invoice.createdById.
+  createdById     String
+  verifiedById    String?
+  approvedById    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  gstTransactions GstTransaction[]
+  vendor          Vendor           @relation(fields: [vendorId], references: [id])
+  project         Project?         @relation(fields: [projectId], references: [id])
+  items           VendorBillItem[]
+  payments        VendorPayment[]
+  // Payout Subsystem Stage 1: a bill can accumulate several payouts over
+  // time (partial payments), same shape as `payments` above -- no @unique
+  // here, unlike Payout.reimbursementId/payslipId. Duplicate/overpayment
+  // prevention stays a service-layer balance check, same as recordPayment
+  // already does against VendorPayment.
+  payouts         Payout[]
+
+  @@unique([vendorId, billNumber])
+  @@index([vendorId])
+  @@index([projectId])
+  @@index([status])
+  // The Section 22 Vendor Payable report filters on dueDate across the whole
+  // table, not within one vendor.
+  @@index([dueDate])
+}
+
+model VendorBillItem {
+  id           String     @id @default(uuid())
+  vendorBillId String
+  description  String
+  amount       Decimal    @db.Decimal(12, 2)
+  taxRate      Decimal    @db.Decimal(5, 2)
+  vendorBill   VendorBill @relation(fields: [vendorBillId], references: [id])
+
+  @@index([vendorBillId])
+}
+
+model VendorPayment {
+  id           String     @id @default(uuid())
+  vendorBillId String
+  amount       Decimal    @db.Decimal(14, 2)
+  paymentDate  DateTime
+  method       String
+  referenceNo  String?
+  // FRS Section 20 lists a note alongside amount/date/method/reference for
+  // both payment directions -- ClientPayment already carries one.
+  note         String?
+  recordedAt   DateTime   @default(now())
+  vendorBill   VendorBill @relation(fields: [vendorBillId], references: [id])
+
+  @@index([vendorBillId])
+  @@index([paymentDate])
+}
+
+model GstTransaction {
+  id             String           @id @default(uuid())
+  direction      GstDirection
+  invoiceId      String?
+  vendorBillId   String?
+  filingPeriodId String?
+  // FRS 17.4 "tax period (month/year)". The tax point of the row: the invoice
+  // date for OUTPUT tax, the bill date for INPUT tax, and the posting date the
+  // preparer chose for a manual adjustment. Stored rather than joined for two
+  // reasons -- a manual adjustment entry (Section 17.3, "Finance can create
+  // manual adjustment entries") has NO source document to join to, and the
+  // from/to filter on GET /gst/transactions would otherwise have to OR across
+  // two nullable relations and still miss those adjustments entirely.
+  //
+  // It is not redundant with filingPeriodId. When a document arrives after its
+  // own period has already been Filed, Section 26 rule 8 forbids adding it
+  // there, so the row is posted into the next open period; documentDate is
+  // then the only record of which period it economically belonged to.
+  documentDate   DateTime
+  gstRate        Decimal          @db.Decimal(5, 2)
+  taxableAmount  Decimal          @db.Decimal(14, 2)
+  cgstAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  sgstAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  igstAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  // Set only on manual adjustment entries: who posted the correction and why.
+  // Rows generated from an invoice or a vendor bill leave both null -- their
+  // actor is already on the AuditLog entry for the send/approve that created
+  // them, and duplicating it here would let the two disagree.
+  createdById    String?
+  note           String?
+  createdAt      DateTime         @default(now())
+  filingPeriod   GstFilingPeriod? @relation(fields: [filingPeriodId], references: [id])
+  invoice        Invoice?         @relation(fields: [invoiceId], references: [id])
+  vendorBill     VendorBill?      @relation(fields: [vendorBillId], references: [id])
+
+  @@index([invoiceId])
+  @@index([vendorBillId])
+  @@index([filingPeriodId])
+  @@index([direction])
+  @@index([documentDate])
+}
+
+model GstFilingPeriod {
+  id             String           @id @default(uuid())
+  periodMonth    Int
+  periodYear     Int
+  status         GstFilingStatus  @default(NOT_STARTED)
+  // FRS 17.2 "Filing Record stored (period, filed-by, filed-date,
+  // reference/ARN number if provided)". Kept as plain String columns with no
+  // relation to User, matching Invoice.createdById and VendorBill.approvedById
+  // -- actor ids are resolved in a follow-up query, the same way
+  // listApprovalSteps does it.
+  preparedById   String?
+  preparedAt     DateTime?
+  filedById      String?
+  filedAt        DateTime?
+  // The ARN / acknowledgement number the government portal returns. Section
+  // 17.2 flags Acknowledged as needing confirmation, so it is an OPTIONAL final
+  // state after Filed, never a required one -- a company that never records an
+  // ARN simply leaves the period at Filed.
+  referenceNo    String?
+  acknowledgedAt DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  transactions   GstTransaction[]
+
+  @@unique([periodMonth, periodYear])
+  @@index([status])
+}
+
+model Budget {
+  id            String       @id @default(uuid())
+  // FRS Section 19 asks for a budget "reference"; every other master entity
+  // (Client, Vendor, Project...) is named, so a Budget is too -- periodLabel
+  // alone ("FY2026-Q3") is not a human-readable identifier on its own.
+  name          String
+  // Optional short reference code, same shape as Department.code.
+  code          String?      @unique
+  scope         BudgetScope
+  departmentId  String?
+  projectId     String?
+  periodLabel   String
+  plannedAmount Decimal      @db.Decimal(14, 2)
+  // FRS 19 "amount and currency" -- matches every other money-carrying model
+  // (Client, Vendor, Invoice, VendorBill) in defaulting to INR.
+  currency      String       @default("INR")
+  status        BudgetStatus @default(DRAFT)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  department    Department?  @relation(fields: [departmentId], references: [id])
+  project       Project?     @relation(fields: [projectId], references: [id])
+  items         BudgetItem[]
+
+  @@index([departmentId])
+  @@index([projectId])
+  @@index([scope])
+}
+
+model BudgetItem {
+  id       String  @id @default(uuid())
+  budgetId String
+  category String
+  amount   Decimal @db.Decimal(14, 2)
+  budget   Budget  @relation(fields: [budgetId], references: [id])
+
+  @@index([budgetId])
+}
+
+model ApprovalStep {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  actorUserId String
+  fromStatus  String
+  toStatus    String
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  entityType    String
+  entityId      String
+  action        String
+  performedById String
+  previousValue Json?
+  newValue      Json?
+  note          String?
+  createdAt     DateTime @default(now())
+  performedBy   User     @relation(fields: [performedById], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([performedById])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model RefreshToken {
+  id        String    @id
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model ReimbursementPayment {
+  id              String        @id
+  reimbursementId String
+  amount          Decimal       @db.Decimal(12, 2)
+  paidAt          DateTime      @default(now())
+  referenceNo     String        @unique
+  notes           String?
+  paidById        String?
+  createdAt       DateTime      @default(now())
+  User            User?         @relation(fields: [paidById], references: [id])
+  Reimbursement   Reimbursement @relation(fields: [reimbursementId], references: [id], onDelete: Cascade)
+
+  @@index([paidById])
+  @@index([referenceNo])
+  @@index([reimbursementId])
+}
+
+// Payout Subsystem Stage 1 (schema-only): the money-OUT counterpart to the
+// PaymentTransaction/PaymentGatewayEvent/PaymentRefund trio above, applied to
+// reimbursements, payroll, and vendor payments instead of client payments.
+// Deliberately provider-independent -- RazorpayX has no account with this
+// company yet, so `provider` defaults to MOCK and a MockPayoutProvider is
+// expected to be the only implementation for a while. No business logic,
+// API route, or provider integration exists yet; this is the row that a
+// later stage's service layer will create, submit, and update via webhook.
+//
+// Source is an explicit nullable FK per source table (reimbursementId /
+// payslipId / vendorBillId), not a generic sourceType/sourceId pair -- this
+// schema has no precedent for polymorphic references anywhere (GstTransaction
+// carries separate invoiceId/vendorBillId columns rather than one generic
+// pair), and explicit FKs keep real referential integrity plus normal
+// Prisma `include` support.
+//
+// PURPOSE/SOURCE CONSISTENCY (audit decision: no DB CHECK constraint --
+// this schema has zero CHECK constraints anywhere, same reasoning
+// GstTransaction's own invoice-xor-vendorBill-xor-manual shape already
+// relies on service-layer enforcement alone). PayoutService.createPayout()
+// MUST enforce, as a required validation, that exactly one of
+// reimbursementId/payslipId/vendorBillId is set and that it matches
+// `purpose`:
+//   REIMBURSEMENT  -> reimbursementId only
+//   SALARY         -> payslipId only
+//   VENDOR_PAYMENT -> vendorBillId only
+//
+// Approved/authorized-to-pay and processed/provider-confirmed-paid are
+// deliberately different concepts: Reimbursement.paymentStatus and
+// Payslip.paymentStatus stay the "Finance is authorized, and today directly
+// records, this payment" fields; Payout.status is the separate, asynchronous
+// "did the external rail actually move the money" state machine, which also
+// carries its OWN maker-checker approval gate (see PayoutStatus below) --
+// layered ON TOP OF, not a replacement for, the source entity's own
+// approval. A later stage is expected to stop flipping Reimbursement/Payslip
+// straight to PAID and instead drive that transition off Payout.status
+// reaching PROCESSED.
+//
+// RETRY / IDEMPOTENCY POLICY (audit decision -- binding on PayoutService
+// when it is built; no separate attempt-history model added for this):
+//   - idempotencyKey is generated once, at CREATED. Retrying an UNCERTAIN
+//     outcome (provider request sent, response never received -- e.g. a
+//     network timeout) with IDENTICAL parameters (same amount, same
+//     destinationAccountId) MUST reuse the same idempotencyKey, so the
+//     provider's own idempotency handling recognizes the resend and never
+//     moves money twice.
+//   - A retry that changes amount or destinationAccountId is a materially
+//     different request and MUST get a NEW idempotencyKey -- reusing the old
+//     key against a changed payload risks the provider rejecting it outright
+//     or returning a stale cached response for parameters that no longer
+//     apply.
+//   - A webhook must NEVER resurrect a terminal Payout (PROCESSED, FAILED,
+//     REVERSED, CANCELLED, REJECTED) -- same terminal-state discipline this
+//     schema already applies to PaymentRefundStatus/PaymentTransactionStatus.
+//     An explicit, human-initiated retry (Finance re-submitting a FAILED
+//     payout) is a deliberate, separate action from webhook processing, and
+//     is the only path allowed to move a payout out of FAILED.
+//   - reimbursementId/payslipId being @unique means a retry after FAILED
+//     reuses the SAME row (there is nowhere else for it to go) --
+//     PayoutService should overwrite providerPayoutId/providerStatus/
+//     providerResponse/failureReason on retry and rely on AuditLog (plus,
+//     optionally, keeping providerResponse attempt-history-shaped) to
+//     preserve what happened on prior attempts, the same way
+//     PaymentTransaction.metadata.failedAttempts already does for inbound
+//     payment retries.
+model Payout {
+  id String @id @default(uuid())
+
+  // Source -- exactly one set, enforced in the service layer (see PURPOSE/
+  // SOURCE CONSISTENCY above).
+  reimbursementId String? @unique
+  payslipId       String? @unique
+  vendorBillId    String?
+
+  purpose  PayoutPurpose
+  amount   Decimal       @db.Decimal(14, 2)
+  currency String        @default("INR")
+
+  status PayoutStatus @default(CREATED)
+
+  provider         PayoutProvider @default(MOCK)
+  // Never the primary key (Financial Safety requirement 3) -- an internal
+  // uuid `id` always identifies the row; this is the provider's own id,
+  // assigned once the provider accepts the request.
+  providerPayoutId String?
+  // The provider's own status string, informational only -- this system's
+  // PayoutStatus is the source of truth for business logic, same discipline
+  // PaymentRefund.gatewayStatus already documents for refunds.
+  providerStatus   String?
+  // Raw provider payload, for support/debugging. Never surfaced through a
+  // normal API response or copied into AuditLog -- that redaction is a
+  // service-layer concern for a later stage (Vendor.bankDetails is this
+  // schema's existing precedent for redacting-at-the-service-layer rather
+  // than at rest).
+  providerResponse Json?
+
+  // Bank UTR / payment reference. Not assumed to exist before processing
+  // (Financial Safety requirement 4) -- null until the provider/bank
+  // confirms it, same as Reimbursement.referenceNo today.
+  utr            String?
+  // Every payout request has one, generated at CREATED time so a retried
+  // submission to the provider is safely deduplicated (Financial Safety
+  // requirement 2; see the RETRY/IDEMPOTENCY POLICY above for exactly when
+  // this is reused vs. regenerated). Globally unique, not scoped per
+  // provider -- generated once per payout intent regardless of which
+  // provider ends up handling it.
+  idempotencyKey String  @unique
+  // Enough for Finance to understand what happened (Financial Safety
+  // requirement 5) without needing the full providerResponse payload.
+  failureReason  String?
+
+  destinationAccountId String?
+
+  // Maker-checker (mirrors PayrollRun.preparedById/finalizedById and
+  // VendorBill.createdById/approvedById): plain actor-id columns, no User
+  // relation -- actor ids are resolved in a follow-up query, matching every
+  // other maker-checker workflow actor field in this schema
+  // (Invoice.createdById/approvedById, VendorBill's own trio, PayrollRun's
+  // trio, PaymentTransaction.initiatedById, PaymentRefund.requestedById,
+  // GstFilingPeriod's trio -- none of them carry a Prisma relation to User).
+  // initiatedById is the maker (creates the payout -> AWAITING_APPROVAL);
+  // approvedById/approvedAt are the checker (-> APPROVED or REJECTED) and
+  // MUST be a different user than initiatedById, enforced in the service
+  // layer exactly like PayrollRun compares finalizedById against
+  // preparedById, or VendorBill compares approvedById against createdById.
+  initiatedById String
+  approvedById  String?
+  approvedAt    DateTime?
+  processedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reimbursement      Reimbursement?         @relation(fields: [reimbursementId], references: [id])
+  payslip            Payslip?               @relation(fields: [payslipId], references: [id])
+  vendorBill         VendorBill?            @relation(fields: [vendorBillId], references: [id])
+  destinationAccount EmployeePayoutAccount? @relation(fields: [destinationAccountId], references: [id])
+  // Payout Subsystem Step 3C (Step 3A.5 design): a later reversal of an
+  // ALREADY-terminal payout (PROCESSED or FAILED -- RazorpayX documents both
+  // sequences) is recorded as its own separate row, never by overwriting
+  // this row's own `status`. See PayoutReversal's own comment for why.
+  reversal           PayoutReversal?
+
+  // Same convention as PaymentTransaction's provider+gatewayOrderId/
+  // gatewayPaymentId uniques: a plain unique constraint, not a partial
+  // index, so multiple CREATED/QUEUED rows can share a null
+  // providerPayoutId and the constraint only binds once a real id lands.
+  @@unique([provider, providerPayoutId])
+  @@index([status])
+  @@index([purpose])
+  @@index([vendorBillId])
+  @@index([destinationAccountId])
+}
+
+// Payout Subsystem Step 3C (Step 3A.5 design, "READY FOR STEP 3B" analysis):
+// records a REVERSAL of an already-terminal Payout as its OWN row, never by
+// mutating Payout.status -- the same precedent PaymentRefund already set for
+// ClientPayment (kept a separate model rather than adding a refund status to
+// the settled payment). This is required because RazorpayX can report a
+// reversal AFTER a payout already reached PROCESSED (or, per RazorpayX's own
+// docs, FAILED -- "a transaction fails but money is debited... status
+// changes to reversed only after money is credited back") -- overwriting
+// Payout.status at that point would erase the historical fact that the
+// payout genuinely processed/attempted first. `applyTerminalOutcome`'s
+// existing PROCESSING -> REVERSED path (a payout reversed as its FIRST and
+// ONLY terminal outcome) is unchanged and does NOT use this model -- this
+// table exists only for the "already terminal, THEN reversed" case.
+//
+// No FK from PayoutEvent to this model (explicit Step 3C design decision,
+// mirrors PaymentGatewayEvent's own FK-free relationship to PaymentRefund) --
+// PayoutEvent stays a pure webhook-delivery dedup ledger; this row is
+// correlated to its Payout only via `payoutId`.
+//
+// Never mutates ReimbursementPayment/VendorPayment/Payslip or the original
+// Payout.amount -- recording a reversal is purely an audit/reconciliation
+// fact layered on top of an already-settled payout; this codebase has no
+// "unpay" capability for any source record (a known, documented,
+// out-of-scope gap -- see Handsoff.md), and this model does not attempt to
+// invent one.
+model PayoutReversal {
+  id               String   @id @default(uuid())
+  payoutId         String   @unique
+  amount           Decimal  @db.Decimal(14, 2)
+  utr              String?
+  reason           String?
+  providerResponse Json?
+  recordedAt       DateTime @default(now())
+
+  payout Payout @relation(fields: [payoutId], references: [id])
+}
+
+// Payout Subsystem Stage 1: an employee's payout destination (bank account or
+// UPI VPA). A separate model, not fields on Employee, for the same reason
+// ReimbursementPayment is separate from Reimbursement -- an employee's
+// account can be replaced over time, and old ones must stay on record for
+// payouts already made against them, not be overwritten in place.
+//
+// Security: `accountNumberEncrypted` is application-level ciphertext (the
+// encryption key belongs in an env var, e.g. PAYOUT_FIELD_ENCRYPTION_KEY --
+// never in this database, same as RAZORPAY_KEY_SECRET today), and only
+// `accountNumberLast4` is ever meant to reach an API response or an
+// AuditLog entry. Encrypting/decrypting it is business logic for a later
+// stage; this column only reserves the (encrypted-shaped) storage.
+// providerContactId/providerFundAccountId are opaque RazorpayX-assigned ids,
+// never secrets, matching PaymentTransaction.gatewayOrderId/gatewayPaymentId.
+model EmployeePayoutAccount {
+  id         String @id @default(uuid())
+  employeeId String
+
+  accountHolderName      String
+  accountNumberEncrypted String?
+  accountNumberLast4     String?
+  ifsc                   String?
+  upiVpa                 String?
+
+  verificationStatus PayoutAccountVerificationStatus @default(UNVERIFIED)
+  verifiedAt         DateTime?
+
+  // At most one active account per employee at a time (MVP decision -- no
+  // primary-account flag, no multiple simultaneously active accounts).
+  // DB-ENFORCED via a Postgres partial unique index --
+  //   CREATE UNIQUE INDEX "EmployeePayoutAccount_employeeId_active_key"
+  //     ON "EmployeePayoutAccount"("employeeId") WHERE "isActive" = true;
+  // -- hand-added to this model's migration.sql, since Prisma's schema DSL
+  // has no syntax for a filtered/partial unique index (unlike
+  // PayrollRun.@@index([periodYear, periodMonth]), which deliberately stayed
+  // a plain index for exactly that reason -- this is the first partial index
+  // in this schema's migration history, used here because the stakes
+  // (routing real money to the wrong bank account) are materially higher
+  // than PayrollRun's duplicate-period case). This index turns a would-be
+  // silent race into a loud `unique constraint violated` error on the
+  // losing write -- it does not by itself make "deactivate old, activate
+  // new" atomic, so the service layer must still perform that pair inside
+  // one locked transaction (the same `SELECT ... FOR UPDATE` /
+  // advisory-lock discipline already used for VendorBill's overpayment race
+  // and PayrollRun's duplicate-period race) so the loser fails cleanly
+  // instead of racing. Deactivated rows are kept, never deleted, so
+  // historical Payout.destinationAccountId references stay valid.
+  isActive Boolean @default(true)
+
+  providerContactId     String?
+  // Unique (plain constraint, multiple NULLs allowed under Postgres --
+  // same convention as PaymentTransaction's gatewayOrderId/gatewayPaymentId
+  // uniques): the same RazorpayX fund account must never be linked from two
+  // different EmployeePayoutAccount rows.
+  providerFundAccountId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  payouts  Payout[]
+
+  @@index([employeeId])
+  @@index([isActive])
+}
+
+// Payout Subsystem Stage 1: the outbound counterpart to PaymentGatewayEvent,
+// kept as a DEDICATED model rather than reusing that one. PaymentGatewayEvent
+// is typed to PaymentGatewayProvider, which stays RAZORPAY-only by design (a
+// separate PayoutProvider enum was the deliberate choice here, precisely so
+// the money-in and money-out provider concerns don't blend); reusing that
+// model would force PaymentGatewayEvent.provider to somehow also hold
+// RAZORPAYX, undoing that separation. Same idempotency shape and guarantee
+// otherwise: one durable row per inbound webhook DELIVERY, unique per
+// provider+eventId, so a redelivered/duplicate payout webhook is recognized
+// and short-circuited before any Payout write is attempted.
+model PayoutEvent {
+  id             String         @id @default(uuid())
+  provider       PayoutProvider @default(MOCK)
+  eventId        String
+  eventType      String
+  payload        Json
+  signatureValid Boolean
+  processedAt    DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@unique([provider, eventId])
+  @@index([eventType])
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSED
+  PAID
+  FAILED
+  PARTIALLY_PAID
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_APPROVED
+  MANAGER_REJECTED
+  RETURNED
+  FINANCE_APPROVED
+  FINANCE_REJECTED
+  REIMBURSEMENT_PENDING
+  PAID
+  CANCELLED
+  PARTIALLY_PAID
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+}
+
+enum BillingModel {
+  FIXED_PRICE
+  MILESTONE
+  TIME_AND_MATERIAL
+  RETAINER
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VendorBillStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  VERIFIED
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum GstDirection {
+  OUTPUT
+  INPUT
+}
+
+enum GstFilingStatus {
+  NOT_STARTED
+  IN_PREPARATION
+  READY
+  FILED
+  ACKNOWLEDGED
+}
+
+enum BudgetScope {
+  COMPANY
+  DEPARTMENT
+  PROJECT
+}
+
+enum BudgetStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  NOTICE_PERIOD
+  TERMINATED
+  RESIGNED
+}
+
+enum RecurringPeriod {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum ReimbursementMethod {
+  BANK_TRANSFER
+  PETTY_CASH
+}
+
+// Payment Gateway Stage 3 (Stage 2 design). Single provider for MVP; adding a
+// second gateway later is an enum-value addition, not a shape change.
+enum PaymentGatewayProvider {
+  RAZORPAY
+}
+
+enum PaymentTransactionStatus {
+  CREATED
+  PENDING
+  VERIFIED
+  FAILED
+  CANCELLED
+}
+
+// Payment Gateway Stage 9 (Stage 8 design, approved decision: REQUESTED ->
+// PROCESSING -> PROCESSED, with REQUESTED -> CANCELLED and PROCESSING ->
+// FAILED as the only other terminal paths -- no extra states added). PROCESSED
+// and FAILED and CANCELLED are all terminal; a later stage's webhook handler
+// must never let a late/out-of-order event overwrite a terminal status (same
+// discipline as PaymentTransactionStatus's own terminal states today).
+enum PaymentRefundStatus {
+  REQUESTED
+  PROCESSING
+  PROCESSED
+  FAILED
+  CANCELLED
+}
+
+// Payout Subsystem Stage 1. What the payout is FOR -- deliberately just the
+// three sources this task defines; add a value here (never a fourth nullable
+// FK column) if a new payout source is ever needed.
+enum PayoutPurpose {
+  REIMBURSEMENT
+  SALARY
+  VENDOR_PAYMENT
+}
+
+// Payout Subsystem Stage 2 (audit decision): payout SUBMISSION now has its
+// own maker-checker approval gate, layered ON TOP OF -- not a replacement
+// for -- the source entity's own approval (a Reimbursement/Payslip/
+// VendorBill is already APPROVED/FINALIZED before a Payout can exist at
+// all). AWAITING_APPROVAL/APPROVED/REJECTED mirror this schema's other
+// maker-checker flows (PayrollRun PROCESSED->FINALIZED via
+// preparedById/finalizedById; VendorBill APPROVED via
+// createdById/approvedById; PaymentRefund REQUESTED->PROCESSING via
+// requestedById/an approving actor). The intended flow:
+//
+//   Finance Maker creates the payout        -> CREATED
+//   submitted for checker review            -> AWAITING_APPROVAL
+//   Finance Checker approves (!= maker)     -> APPROVED
+//   Finance Checker rejects                 -> REJECTED
+//   provider submission after APPROVED      -> QUEUED / PROCESSING
+//   provider confirms funds moved           -> PROCESSED
+//
+// REJECTED and CANCELLED are deliberately NOT conflated: REJECTED is a
+// checker's considered decision against a specific payout request
+// (analogous to VendorBillStatus.REJECTED); CANCELLED is Finance
+// withdrawing a payout before submission -- reachable only from CREATED or
+// AWAITING_APPROVAL, never from APPROVED/QUEUED/PROCESSING onward
+// (analogous to VendorBillStatus.CANCELLED, and enforced in the service
+// layer's transition map the same way PayrollRun/VendorBill enforce theirs
+// -- Prisma enums carry no transition graph of their own).
+//
+// No PENDING: nothing actionable happens between CREATED and
+// AWAITING_APPROVAL that a separate state earns.
+//
+// PROCESSED, FAILED, REVERSED, CANCELLED, and REJECTED are all terminal --
+// a webhook must never resurrect any of them (same discipline
+// PaymentRefundStatus/PaymentTransactionStatus already document). An
+// explicit, human-initiated retry out of FAILED is a deliberate, separate
+// action from webhook processing (see the Payout model's own RETRY/
+// IDEMPOTENCY POLICY comment).
+enum PayoutStatus {
+  CREATED
+  AWAITING_APPROVAL
+  APPROVED
+  QUEUED
+  PROCESSING
+  PROCESSED
+  REJECTED
+  FAILED
+  REVERSED
+  CANCELLED
+}
+
+// Payout Subsystem Stage 1. Separate from PaymentGatewayProvider (money IN,
+// RAZORPAY only) by deliberate choice -- money-in and money-out providers are
+// different integrations and different risk surfaces, even though both may
+// eventually be Razorpay-family products. MOCK is a first-class, permanent
+// value (not a placeholder to delete later): the company has no RazorpayX
+// account yet, so a MockPayoutProvider is expected to be the only
+// implementation for a while, and the schema must not assume RazorpayX
+// exists.
+enum PayoutProvider {
+  MOCK
+  RAZORPAYX
+}
+
+// Payout Subsystem Stage 1.
+enum PayoutAccountVerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  FAILED
+}

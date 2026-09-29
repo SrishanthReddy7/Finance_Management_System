@@ -1,0 +1,330 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #F5F6F9;
+  --surface: #FFFFFF;
+  --border: #E4E7EC;
+  --ink: #12131A;
+  --ink-muted: #6B7080;
+  --ink-faint: #9CA0AF;
+  --accent: #3F35C4;
+  --accent-soft: #EEEDFB;
+  --success: #15803D;
+  --success-soft: #EAF7EE;
+  --warning: #B45309;
+  --warning-soft: #FDF2E3;
+  --danger: #B91C1C;
+  --danger-soft: #FBEAEA;
+  --info: #1D4ED8;
+  --info-soft: #EAF0FE;
+  --teal: #0F766E;
+  --sidebar-bg: #14152B;
+  --sidebar-ink: #9EA1C6;
+  --sidebar-ink-active: #FFFFFF;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Hide the browser's built-in password reveal icon */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   CEO / Super Admin, Manager, Team Lead and Finance Admin themes. Scoped to [data-theme="ceo"] / "manager" / "teamlead" / "finance" (set by CeoShell), so
+   every existing page that reads these tokens re-themes for those roles only;
+   all other roles keep the :root values above untouched.
+   --------------------------------------------------------------------------- */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) {
+  --bg: #EEF4FF;
+  --surface: #FFFFFF;
+  --border: #E1E9F7;
+  --ink: #0B1B3F;
+  --ink-muted: #5B6785;
+  --ink-faint: #8B95AE;
+  --accent: #1D5FE8;
+  --accent-soft: #EAF1FF;
+  --info: #1D5FE8;
+  --info-soft: #EAF1FF;
+  --success: #16A34A;
+  --success-soft: #E8F8EE;
+  --warning: #D97706;
+  --warning-soft: #FFF4E0;
+  --danger: #DC2626;
+  --danger-soft: #FDECEC;
+  --purple: #7C3AED;
+  --purple-soft: #F1EBFE;
+  --sidebar-bg: #0A1433;
+  --sidebar-ink: #A9B6D6;
+  --sidebar-ink-active: #FFFFFF;
+  --sidebar-active-bg: #1D5FE8;
+  --card-shadow: 0 1px 2px rgba(11, 27, 63, 0.04), 0 8px 24px rgba(29, 95, 232, 0.07);
+}
+
+/* Soft rounded cards/tables/inputs for every page rendered inside the CEO shell */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .rounded-xl { border-radius: 16px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .rounded-lg { border-radius: 12px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .rounded-xl.border { box-shadow: var(--card-shadow); }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) table thead tr { background: #F4F8FF !important; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) tbody tr.cursor-pointer:hover { background: #F4F8FF; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) input:focus,
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) select:focus,
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(29, 95, 232, 0.12);
+}
+
+/* ---------------------------------------------------------------------------
+   CEO theme -- shared component layer (Stage 4+). Everything below is scoped
+   to :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]), so pages/components shared with other roles look
+   exactly as before for those roles. Pages are styled through their existing
+   markup (tokens + Tailwind classes) rather than being forked.
+   --------------------------------------------------------------------------- */
+
+/* Numbers use the same face as the dashboard (no mono) */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .num { font-family: inherit; font-variant-numeric: tabular-nums; }
+
+/* Section headings inside pages */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main h3.mb-3 { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+/* Buttons */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) :is(a, button)[style*="background: var(--accent)"] {
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(29, 95, 232, 0.28);
+  transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) :is(a, button)[style*="background: var(--accent)"]:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) button[style*="background: var(--accent)"]:disabled { box-shadow: none; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.rounded-lg.border:not([style*="background: var(--accent)"]) {
+  background: #fff;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.rounded-lg.border:not([style*="background: var(--accent)"]):hover:not(:disabled) {
+  background: #F4F8FF;
+  border-color: #C9D8F4;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button[style*="background: var(--danger-soft)"] { border-radius: 12px; font-weight: 600; }
+
+/* Form controls */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  border-radius: 12px;
+  background-color: #fff;
+  border-color: #D5DFF2;
+  padding-left: 14px;
+  padding-right: 14px;
+  max-width: 100%;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) :is(input, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]) { min-height: 42px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) :is(input, select, textarea)::placeholder { color: #9AA6C0; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) label { font-weight: 600; }
+
+/* Tables (DataTable) */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt-wrap { overflow-x: auto; border-radius: 16px; box-shadow: var(--card-shadow); }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt th, :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt td { white-space: nowrap; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt td { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt th { padding: 14px 18px; font-size: 11px; letter-spacing: 0.08em; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt td { padding: 15px 18px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt tbody tr { transition: background 0.12s; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt tbody tr:hover { background: #F8FBFF; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .dt-wrap button { border-radius: 10px; background: #fff; }
+
+/* KPI stat cards */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .stat-card {
+  padding: 20px 22px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F9FBFF 100%);
+  border-top: 3px solid var(--accent);
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .stat-card > div:first-child { font-weight: 600; }
+
+/* Sub-page tabs -> segmented pill control */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .page-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 14px;
+  background: #DCE7FB;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .page-tabs :is(a, button) {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  white-space: nowrap;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .page-tabs :is(a, button)[aria-current="page"] {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(11, 27, 63, 0.1);
+}
+
+/* Informational (non-empty-state) paragraphs opt out of the dashed empty-state card */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main p.profile-note { color: var(--ink-muted); }
+
+/* Filter chips */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.rounded-full.border { padding: 7px 16px; font-weight: 600; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.rounded-full.border:hover { border-color: #B9CDF3; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.rounded-full.border[style*="background: var(--accent-soft)"] { box-shadow: 0 2px 8px rgba(29, 95, 232, 0.15); }
+
+/* Modals */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .fixed.inset-0.z-50 {
+  background: rgba(11, 27, 63, 0.5) !important;
+  backdrop-filter: blur(4px);
+  padding: 16px;
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .fixed.inset-0.z-50 > * {
+  border-radius: 20px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 30px 80px rgba(11, 27, 63, 0.28);
+}
+
+/* Loading / empty / error states (pages render these as a bare <p class="text-[13px]">) */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main p[class="text-[13px]"] {
+  padding: 44px 16px;
+  text-align: center;
+  border: 1px dashed #C9D8F4;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main p[class="text-[13px]"][style*="ink-muted"] { animation: ceo-pulse 1.4s ease-in-out infinite; }
+@keyframes ceo-pulse { 50% { opacity: 0.5; } }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main div.rounded-lg[style*="danger-soft"] { border: 1px solid #F6C7C7; padding: 12px 16px; }
+
+/* Responsive grids inside pages */
+@media (max-width: 900px) {
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid.grid-cols-4,
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid.grid-cols-3,
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="repeat("] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 560px) {
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid.grid-cols-2,
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid.grid-cols-3,
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid.grid-cols-4,
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="repeat("] { grid-template-columns: minmax(0, 1fr) !important; }
+  /* Invoice / bill line-item rows: description on its own line, the rest two per row */
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="3fr"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="3fr"] > :first-child { grid-column: 1 / -1; }
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .w-80 { width: 100%; }
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .ceo-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .ceo-scroll::-webkit-scrollbar { width: 6px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .ceo-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 6px; }
+
+/* Full-page forms: balanced width, centred in the content area (CEO only) */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main form.max-w-3xl { max-width: 960px; margin-inline: auto; padding: 28px; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main form.max-w-xl { max-width: 680px; margin-inline: auto; padding: 28px; }
+/* Field wrappers add mt-4 to every child except the first, which misaligns the
+   second column of a grid row; grid gap already provides the spacing. */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid > .first\:mt-0 { margin-top: 0; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main form .grid { gap: 18px; }
+
+/* Inputs inside grid rows (invoice / bill line items) must be allowed to shrink */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid > :is(input, select) { min-width: 0; }
+
+/* Stage 5: People & Business Operations ---------------------------------- */
+/* Salary Structures master/detail: was a fixed 280px column with no small-screen fallback */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="280px 1fr"] {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) !important;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main .grid[style*="280px 1fr"] { grid-template-columns: minmax(0, 1fr) !important; }
+}
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.block.w-full.border-b { transition: background 0.12s; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main button.block.w-full.border-b:hover { background: #F4F8FF; }
+/* Salary component rows inside the salary form modal */
+@media (max-width: 560px) {
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .grid[style*="2fr 1fr 1fr auto"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  :is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .grid[style*="2fr 1fr 1fr auto"] > :first-child { grid-column: 1 / -1; }
+}
+
+/* Stage 6/7: report hub cards */
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main a.rounded-xl.border.p-4 { padding: 18px 20px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+:is([data-theme="ceo"], [data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main a.rounded-xl.border.p-4:hover { transform: translateY(-2px); border-color: #B9CDF3; box-shadow: 0 10px 28px rgba(29, 95, 232, 0.14); }
+/* Manager + Team Lead Phase 2: People pages (directory cards, org lists); budget cards below stay Manager-only -- */
+/* Manager Phase 2: People + Projects pages (Manager theme only) ---------- */
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .dir-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .dir-card {
+  padding: 20px;
+  border-radius: 18px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .dir-card:hover { transform: translateY(-2px); border-color: #B9CDF3; box-shadow: 0 12px 28px rgba(29, 95, 232, 0.14); }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .dir-card > button:first-child > div:first-child { width: 48px; height: 48px; font-size: 17px; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .dir-card > button:first-child > div:nth-child(2) { font-size: 15px; }
+
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .org-list { border-radius: 18px; overflow: hidden; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .org-row { padding: 16px 20px; transition: background 0.12s; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"]) .org-row:hover { background: #F6F9FF; }
+
+:is([data-theme="manager"], [data-theme="finance"]) .budget-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+:is([data-theme="manager"], [data-theme="finance"]) .budget-card { padding: 20px; border-radius: 18px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+:is([data-theme="manager"], [data-theme="finance"]) .budget-card:hover { transform: translateY(-2px); border-color: #B9CDF3; box-shadow: 0 12px 28px rgba(29, 95, 232, 0.14); }
+@media (max-width: 480px) {
+  :is([data-theme="manager"], [data-theme="finance"]) .budget-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Manager + Team Lead Phase 3: Expenses + Reports pages (file-input polish below stays Manager-only) --- */
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list { border-radius: 18px; overflow: hidden; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list > div { padding: 18px 22px; transition: background 0.12s; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list > div:hover { background: #F6F9FF; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list > div > div:first-child > div > div:first-child { font-size: 15px; font-weight: 600; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list button[title] { width: 36px; height: 36px; border-radius: 12px; }
+@media (max-width: 560px) {
+  :is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .appr-list > div { flex-direction: column; align-items: flex-start; }
+}
+
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .payslip-modal { padding: 28px; }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .payslip-modal .text-\[16px\] { font-size: 20px; }
+
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) .report-filters {
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+}
+
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) main a.rounded-xl.border.p-4 { border-radius: 16px; }
+
+/* Manager + Team Lead polish: native file input button matches the rest of the form */
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) input[type="file"] { font-size: 13px; color: var(--ink-muted); }
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border: 1px solid #C9D8F4;
+  border-radius: 10px;
+  background: #F4F8FF;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+:is([data-theme="manager"], [data-theme="teamlead"], [data-theme="finance"], [data-theme="employee"]) input[type="file"]::file-selector-button:hover { background: #EAF1FF; }
+
+/* Finance Admin Phase 3: Finance pages (Finance Admin theme only) ---------- */
+[data-theme="finance"] .sal-comp { column-gap: 40px; row-gap: 0; }
+[data-theme="finance"] .sal-comp > div { padding: 11px 0; border-bottom: 1px solid var(--border); }
+@media (max-width: 640px) {
+  [data-theme="finance"] .sal-comp { grid-template-columns: minmax(0, 1fr) !important; }
+}
