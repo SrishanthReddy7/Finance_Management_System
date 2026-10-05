@@ -604,7 +604,7 @@ async function build(ctx) {
       createdAt: T(`2026-${pad(month)}-01`, 5),
     });
     const path = { IN_PREPARATION: ["NOT_STARTED>IN_PREPARATION"], READY: ["NOT_STARTED>IN_PREPARATION", "IN_PREPARATION>READY"], FILED: ["NOT_STARTED>IN_PREPARATION", "IN_PREPARATION>READY", "READY>FILED"], NOT_STARTED: [] }[status];
-    const steps = path.map((p, i) => {
+    const steps = path.map((p) => {
       const [from, to] = p.split(">");
       const at = to === "FILED" ? T(filedOn, 6) : T(addDays(filedOn || `2026-${pad(month + 1)}-10`, to === "READY" ? -2 : -4), 5);
       return { from, to, actor: "fin", at };

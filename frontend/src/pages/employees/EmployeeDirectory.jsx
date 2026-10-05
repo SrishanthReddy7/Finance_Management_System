@@ -47,7 +47,9 @@ export default function EmployeeDirectory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departmentId, page])
 
-  const canCreate = user?.roleType === 'SUPER_ADMIN' || user?.roleType === 'ADMIN'
+  const canCreate =
+    user?.roleName !== 'Manager' &&
+    (user?.roleType === 'SUPER_ADMIN' || can('CREATE_EMPLOYEE'))
 
   // Mirrors the backend rule (FRS Section 9): never your own account; a Super
   // Admin may change anyone; an Admin needs MANAGE_USERS and may only change

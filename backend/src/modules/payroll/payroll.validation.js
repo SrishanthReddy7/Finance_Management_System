@@ -78,4 +78,7 @@ export const payslipIdParamSchema = z.object({ id: uuid("Payslip id") });
 
 export const listPayslipsQuerySchema = z.object({
   periodYear: z.coerce.number().int().min(2000).max(currentYear + 1).optional(),
+  periodMonth: z.coerce.number().int().min(1).max(12).optional(),
+  paymentStatus: z.enum(["UNPAID", "PAID", "FAILED"]).optional(),
+  status: z.string().optional(),
 });

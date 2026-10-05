@@ -17,7 +17,8 @@ export default function DataTable({
 
   return (
     <div className="dt-wrap overflow-hidden rounded-xl border" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-      <table className="dt w-full border-collapse text-left">
+      <div className="overflow-x-auto w-full">
+        <table className="dt w-full min-w-[600px] border-collapse text-left">
         <thead>
           <tr style={{ background: '#FAFAFC' }}>
             {columns.map((col) => (
@@ -56,6 +57,7 @@ export default function DataTable({
           ))}
         </tbody>
       </table>
+      </div>
 
       {showPagination && (
         <div

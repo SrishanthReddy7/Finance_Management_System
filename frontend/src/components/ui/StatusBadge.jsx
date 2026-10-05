@@ -1,9 +1,10 @@
 const COLORS = {
-  green: { bg: 'var(--success-soft)', text: 'var(--success)' },
-  amber: { bg: 'var(--warning-soft)', text: 'var(--warning)' },
-  red: { bg: 'var(--danger-soft)', text: 'var(--danger)' },
-  blue: { bg: 'var(--info-soft)', text: 'var(--info)' },
-  gray: { bg: 'var(--bg)', text: 'var(--ink-muted)' },
+  green: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0', dot: '#10B981' },
+  amber: { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A', dot: '#F59E0B' },
+  red: { bg: '#FFF1F2', text: '#E11D48', border: '#FECDD3', dot: '#F43F5E' },
+  blue: { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE', dot: '#3B82F6' },
+  purple: { bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE', dot: '#8B5CF6' },
+  gray: { bg: '#F8FAFC', text: '#64748B', border: '#E2E8F0', dot: '#94A3B8' },
 }
 
 // Keys pulled from backend/prisma/schema.prisma enums so they match exactly.
@@ -32,6 +33,7 @@ const STATUS_MAP = {
   expense: {
     DRAFT: { label: 'Draft', color: 'gray' },
     SUBMITTED: { label: 'Submitted', color: 'blue' },
+    APPROVED: { label: 'Approved', color: 'green' },
     MANAGER_APPROVED: { label: 'Manager Approved', color: 'green' },
     MANAGER_REJECTED: { label: 'Manager Rejected', color: 'red' },
     RETURNED: { label: 'Returned', color: 'red' },
@@ -39,6 +41,8 @@ const STATUS_MAP = {
     FINANCE_REJECTED: { label: 'Finance Rejected', color: 'red' },
     REIMBURSEMENT_PENDING: { label: 'Reimbursement Pending', color: 'amber' },
     PAID: { label: 'Paid', color: 'green' },
+    REIMBURSED: { label: 'Paid', color: 'green' },
+    REJECTED: { label: 'Rejected', color: 'red' },
     CANCELLED: { label: 'Cancelled', color: 'gray' },
     PARTIALLY_PAID: { label: 'Partially Paid', color: 'amber' },
   },
@@ -95,8 +99,6 @@ const STATUS_MAP = {
     PAID: { label: 'Paid', color: 'green' },
     CANCELLED: { label: 'Cancelled', color: 'gray' },
   },
-  // Payslip.paymentStatus -- shares the PaymentStatus enum with other
-  // modules, but the payroll flow itself only ever writes PENDING/PAID/FAILED.
   paymentStatus: {
     PENDING: { label: 'Pending', color: 'gray' },
     PROCESSED: { label: 'Processed', color: 'blue' },
@@ -120,9 +122,20 @@ export default function StatusBadge({ status, entity }) {
 
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium"
-      style={{ background: palette.bg, color: palette.text }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium tracking-wide transition-all"
+      style={{
+        background: palette.bg,
+        color: palette.text,
+        borderColor: palette.border,
+      }}
     >
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{
+          backgroundColor: palette.dot,
+          boxShadow: `0 0 6px ${palette.dot}80`,
+        }}
+      />
       {label}
     </span>
   )

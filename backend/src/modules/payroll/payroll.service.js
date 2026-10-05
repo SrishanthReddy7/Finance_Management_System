@@ -100,14 +100,18 @@ const finalizedOnlyWhere = {
   OR: [{ payrollRunId: null }, { payrollRun: { status: { in: VISIBLE_RUN_STATUSES } } }],
 };
 
-export async function listEmployeePayslips(actingUser, employeeId, { periodYear } = {}) {
+export async function listEmployeePayslips(actingUser, employeeId, { periodYear, periodMonth, paymentStatus, status } = {}) {
   const employee = await prisma.employee.findUnique({ where: { id: employeeId }, select: { id: true } });
   if (!employee) throw new AppError(404, "Employee not found.");
+
+  const targetStatus = paymentStatus || (status && ["UNPAID", "PAID", "FAILED"].includes(status.toUpperCase()) ? status.toUpperCase() : undefined);
 
   const rows = await prisma.payslip.findMany({
     where: {
       employeeId,
-      ...(periodYear ? { periodYear } : {}),
+      ...(periodYear ? { periodYear: Number(periodYear) } : {}),
+      ...(periodMonth ? { periodMonth: Number(periodMonth) } : {}),
+      ...(targetStatus ? { paymentStatus: targetStatus } : {}),
       ...(canSeeUnfinalizedPayslips(actingUser, employeeId) ? {} : finalizedOnlyWhere),
     },
     include: PAYSLIP_INCLUDE,

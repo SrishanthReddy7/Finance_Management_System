@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Users,
+  UserCheck,
   Building2,
   Briefcase,
   FileText,
@@ -30,6 +31,14 @@ const NAV_DEFINITIONS = [
     icon: LayoutDashboard,
     href: '/dashboard',
     isVisible: () => true,
+  },
+  {
+    label: 'HR Portal',
+    icon: UserCheck,
+    href: '/hr-admin',
+    isVisible: ({ user }) =>
+      user?.roleName === 'HR Admin' ||
+      user?.role?.name === 'HR Admin',
   },
   {
     label: 'Employee Directory',

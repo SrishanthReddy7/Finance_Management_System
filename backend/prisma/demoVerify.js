@@ -32,7 +32,7 @@ const countOf = (d) => d?.totalCount ?? d?.pagination?.totalCount ?? d?.total ??
 async function main() {
   console.log("1. Login flow + roles");
   const tokens = {};
-  for (const [local, label] of ACCOUNTS) {
+  for (const [local] of ACCOUNTS) {
     const email = `${local}@demo.saanvika.test`;
     const r = await fetch(`${API}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: PASSWORD }) });
     const body = await r.json();

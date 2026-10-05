@@ -30,10 +30,13 @@ export async function createUser(actingUser, input) {
       );
     }
   } else {
+    // Only Super Admin or an Admin explicitly granted CREATE_EMPLOYEE (e.g. HR Admin) may create employee accounts.
+    // Managers and other admins without CREATE_EMPLOYEE are strictly forbidden.
+    const isManager = actingUser.roleName === "Manager" || actingUser.role?.name === "Manager";
     const allowed =
-      actingUser.roleType === "SUPER_ADMIN" ||
-      actingUser.roleType === "ADMIN" ||
-      actingUser.permissionCodes?.includes("CREATE_EMPLOYEE");
+      !isManager &&
+      (actingUser.roleType === "SUPER_ADMIN" ||
+        actingUser.permissionCodes?.includes("CREATE_EMPLOYEE"));
 
     if (!allowed) {
       throw new AppError(

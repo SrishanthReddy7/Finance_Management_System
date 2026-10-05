@@ -207,7 +207,7 @@ npm run seed          # base data (or `npm run seed:demo` for demo data)
 npm run dev           # starts API on http://localhost:5000
 ```
 
-### 3. Frontend setup
+### 3. Frontend setup (Web Portal)
 
 ```bash
 cd frontend
@@ -215,7 +215,53 @@ npm install
 npm run dev           # starts Vite dev server on http://localhost:5173
 ```
 
-The frontend calls the API via `VITE_API_URL` (defaults to `http://localhost:5000/api/v1` if unset).
+The web frontend calls the API via `VITE_API_URL` (defaults to `http://localhost:5000/api/v1` if unset).
+
+### 4. Mobile App setup (React Native / Expo)
+
+```bash
+cd mobile
+npm install
+npm start             # starts Expo development server & Metro bundler on port 8081
+```
+
+- **Run in Web Browser**: Press `w` in the terminal, or run `npm run web`.
+- **Run on Android Emulator**: Press `a` in the terminal.
+- **Run on Physical Phone**: Download the free **Expo Go** app (iOS/Android), and scan the QR code printed in the terminal.
+
+---
+
+## 🚀 Running the Full Stack (Manager's Quick Start Guide)
+
+To run the complete system simultaneously for testing, open **3 separate terminal windows**:
+
+| Terminal | Path | Command | Description | URL / Port |
+| :--- | :--- | :--- | :--- | :--- |
+| **Terminal 1: Backend** | `backend/` | `npm run dev` | Express REST API server | `http://localhost:5000` |
+| **Terminal 2: Web App** | `frontend/` | `npm run dev` | React Web Dashboard | `http://localhost:5173` |
+| **Terminal 3: Mobile App** | `mobile/` | `npm start` | React Native / Expo App | Metro on `8081` (Press `w` for Web) |
+
+---
+
+## 👥 Demo User Accounts & Access Roles
+
+The database is seeded with ready-to-test accounts across all hierarchy levels.
+
+**Default Password for all accounts:** `Passw0rd!123`
+
+| Name | Role | Email | Key Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Asha Rao** | **CEO / Super Admin** | `ceo@company.test` | Full system access, all departments, payout authorization, financial audits |
+| **Priya Menon** | **Finance Admin** | `finance@company.test` | Invoicing, client payments, finance-level expense review, reimbursement payouts |
+| **Ananya Deshmukh** | **HR Admin** | `hr@company.test` | HR Admin portal, staff directory, employee onboarding, activate/deactivate accounts |
+| **Rahul Verma** | **Manager** | `manager@company.test` | Departmental management, expense approval for direct reports, project tracking |
+| **Divya Nair** | **Team Lead** | `teamlead@company.test` | Team lead review, expense claims, team project visibility |
+| **Karan Shah** | **Employee A** | `employee.a@company.test` | Submit expenses & receipts, view own payslips & tax deductions |
+| **Neha Iyer** | **Employee B** | `employee.b@company.test` | Submit expenses & receipts, view own payslips |
+
+> **Mobile Tip**: On the mobile app login screen, you can either enter credentials manually or tap any of the quick-login demo chips (**HR Admin**, **CEO**, **Finance**, **Manager**, **Employee A**) to auto-fill credentials instantly.
+
+---
 
 ## Environment Variables
 
@@ -291,6 +337,16 @@ Base path: `http://localhost:5000/api/v1` (plus a plain `GET /health` outside th
 | `npm run build` | Build for production |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run oxlint |
+
+### Mobile (`mobile/`)
+
+| Command | Description |
+|---|---|
+| `npm start` | Start the Expo CLI & Metro bundler with interactive terminal menu |
+| `npm run android` | Launch directly in connected Android device or emulator |
+| `npm run ios` | Launch in iOS simulator (macOS only) |
+| `npm run web` | Bundle and open mobile app in web browser |
+
 
 
 

@@ -4,6 +4,7 @@
 
 import multer from "multer";
 import fs from "fs/promises";
+import fsSync from "fs";
 import path from "path";
 import crypto from "crypto";
 import { AppError } from "./error.middleware.js";
@@ -18,7 +19,15 @@ const UPLOAD_ROOT = path.resolve(process.cwd(), "uploads");
 
 function storageFor(subfolder) {
   return multer.diskStorage({
-    destination: (req, file, cb) => cb(null, path.join(UPLOAD_ROOT, subfolder)),
+    destination: (req, file, cb) => {
+      const dest = path.join(UPLOAD_ROOT, subfolder);
+      try {
+        fsSync.mkdirSync(dest, { recursive: true });
+        cb(null, dest);
+      } catch (err) {
+        cb(err);
+      }
+    },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
       const safeName = `${crypto.randomUUID()}${ext}`;

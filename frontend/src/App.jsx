@@ -18,6 +18,7 @@ import CreateVendorBill from './pages/vendor-bills/CreateVendorBill'
 import VendorBillDetail from './pages/vendor-bills/VendorBillDetail'
 import PayoutsList from './pages/payouts/PayoutsList'
 import PayoutDetail from './pages/payouts/PayoutDetail'
+import HRAdminPage from './pages/hr/HRAdminPage'
 import EmployeeDirectory from './pages/employees/EmployeeDirectory'
 import EmployeeProfile from './pages/employees/EmployeeProfile'
 import OrgTeams from './pages/org/OrgTeams'
@@ -199,6 +200,14 @@ function App() {
         element={
           <ProtectedRoute require={PAYOUT_READ}>
             <PayoutDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr-admin"
+        element={
+          <ProtectedRoute requireRoleType={['SUPER_ADMIN', 'ADMIN']}>
+            <HRAdminPage />
           </ProtectedRoute>
         }
       />

@@ -85,7 +85,7 @@ export default function FinanceAdminDashboard() {
   const recentPayments = paymentReport?.payments?.slice(0, 3) || []
 
   const actions = [
-    { label: 'Expense Claims to Approve', count: financeQueueRows.length, to: '/expenses/approvals', icon: ClipboardCheck, color: '#1D5FE8', bg: '#EAF1FF' },
+    { label: 'Expense Claims to Approve', count: financeQueueRows.length, to: '/expenses/approvals', icon: ClipboardCheck, color: '#2563EB', bg: '#EFF6FF' },
     { label: 'Invoices Pending Approval', count: invoiceApprovalCount, to: '/invoices', icon: FileText, color: '#7C3AED', bg: '#F1EBFE' },
     { label: 'Vendor Bills to Approve', count: billApprovalCount, to: '/vendor-bills', icon: Landmark, color: '#EA580C', bg: '#FFF0E3' },
     { label: 'Payouts to Approve', count: payoutApprovalCount, to: '/payouts', icon: Send, color: '#0E9F8E', bg: '#E2F7F4' },
@@ -106,7 +106,7 @@ export default function FinanceAdminDashboard() {
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard icon={ArrowDownLeft} color="#16A34A" bg="#E8F8EE" label="Cash In (MTD)" value={formatCurrency(paymentReport?.summary?.totalReceived ?? 0)} sublabel="Client payments received" sublabelColor="var(--success)" to="/invoices/payments" />
         <KpiCard icon={ArrowUpRight} color="#EA580C" bg="#FFF0E3" label="Cash Out (MTD)" value={formatCurrency(paymentTransactions?.summary?.totalOut ?? 0)} sublabel="Vendors + payroll + refunds" sublabelColor="var(--warning)" to="/reports" />
-        <KpiCard icon={Receipt} color="#1D5FE8" bg="#EAF1FF" label="Accounts Receivable" value={formatCurrency(outstanding?.summary?.totalOutstanding ?? 0)} sublabel={`${overdueAr} overdue`} sublabelColor={overdueAr ? 'var(--danger)' : 'var(--ink-muted)'} to="/invoices" />
+        <KpiCard icon={Receipt} color="#2563EB" bg="#EFF6FF" label="Accounts Receivable" value={formatCurrency(outstanding?.summary?.totalOutstanding ?? 0)} sublabel={`${overdueAr} overdue`} sublabelColor={overdueAr ? 'var(--danger)' : 'var(--ink-muted)'} to="/invoices" />
         <KpiCard icon={Wallet} color="#7C3AED" bg="#F1EBFE" label="Accounts Payable" value={formatCurrency(payable?.summary?.totalOutstanding ?? 0)} sublabel={`${overdueAp} overdue`} sublabelColor={overdueAp ? 'var(--danger)' : 'var(--ink-muted)'} to="/vendor-bills" />
       </div>
 

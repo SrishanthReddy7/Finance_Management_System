@@ -34,7 +34,7 @@ export default function TeamLeadDashboard() {
       )}
 
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={FileText} color="#1D5FE8" bg="#EAF1FF" label="My Team's Expenses" value={formatCurrency(thisMonthTotal)} sublabel="This month" to="/reports/employee-reimbursement" />
+        <KpiCard icon={FileText} color="#2563EB" bg="#EFF6FF" label="My Team's Expenses" value={formatCurrency(thisMonthTotal)} sublabel="This month" to="/reports/employee-reimbursement" />
         <KpiCard icon={Clock} color="#7C3AED" bg="#F1EBFE" label="Pending Your Approval" value={String(pendingApprovalRows.length)} sublabel="Awaiting review" sublabelColor="var(--warning)" to="/expenses/approvals" />
         <KpiCard icon={Users} color="#EA580C" bg="#FFF0E3" label="Team Headcount" value={String(team.length)} sublabel="Direct + indirect reports" to="/org-teams" />
         <KpiCard icon={CheckCircle2} color="#16A34A" bg="#E8F8EE" label="Approved, Awaiting Payment" value={String(awaitingPaymentCount)} sublabel="With Finance" sublabelColor="var(--success)" to="/expenses/approvals" />

@@ -141,7 +141,8 @@ function sanitizeErrorMessage(err) {
 function decoratePayout(payout) {
   // providerResponse is deliberately never surfaced through a normal API
   // response (schema.prisma's own design note on Payout.providerResponse).
-  const { providerResponse, ...rest } = payout;
+  const rest = { ...payout };
+  delete rest.providerResponse;
   return { ...rest, amount: round2(num(payout.amount)) };
 }
 
@@ -1024,7 +1025,8 @@ function mapReconciliationError(err) {
 /** Strips providerResponse before a PayoutReversal ever reaches an API response -- same discipline decoratePayout already applies to Payout. */
 function decorateReversal(reversal) {
   if (!reversal) return reversal;
-  const { providerResponse, ...rest } = reversal;
+  const rest = { ...reversal };
+  delete rest.providerResponse;
   return { ...rest, amount: round2(num(reversal.amount)) };
 }
 

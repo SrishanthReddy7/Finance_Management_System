@@ -13,6 +13,9 @@ const EXPENSE_STATUSES = [
   "REIMBURSEMENT_PENDING",
   "PAID",
   "CANCELLED",
+  "APPROVED",
+  "REIMBURSED",
+  "REJECTED",
 ];
 
 export const createClaimSchema = z.object({
@@ -47,7 +50,16 @@ export const updateClaimSchema = z
   });
 
 export const reviewSchema = z.object({
-  decision: z.enum(["APPROVE", "REJECT", "RETURN"]),
+  decision: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const upper = val.toUpperCase().trim();
+      if (upper === "APPROVED") return "APPROVE";
+      if (upper === "REJECTED") return "REJECT";
+      if (upper === "RETURNED") return "RETURN";
+      return upper;
+    }
+    return val;
+  }, z.enum(["APPROVE", "REJECT", "RETURN"])),
   comment: z.string().optional(),
 });
 

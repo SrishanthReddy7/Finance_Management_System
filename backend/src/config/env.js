@@ -19,14 +19,17 @@ export const env = {
   port: Number(process.env.PORT) || 5000,
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "15m",
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
   // CORS_ORIGIN may be a single origin or a comma-separated list; the `cors`
   // package only does an exact per-request match against a string, so a
   // multi-value string here would never match any real request's Origin
   // header. Split into an array so each origin is matched individually.
-  corsOrigin: (process.env.CORS_ORIGIN || "http://localhost:5173")
+  corsOrigin: (
+    process.env.CORS_ORIGIN ||
+    "http://localhost:5173,http://localhost:8081,http://localhost:19006,http://localhost:3000"
+  )
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),

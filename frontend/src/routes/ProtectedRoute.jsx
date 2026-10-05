@@ -3,7 +3,9 @@ import { useAuth } from '../context/AuthContext'
 
 export default function ProtectedRoute({ require, requireRoleType, children }) {
   const { user, isLoading, can } = useAuth()
-  const hasToken = !!localStorage.getItem('accessToken')
+  const expiresAt = sessionStorage.getItem('sessionExpiresAt')
+  const isExpired = expiresAt ? Date.now() > Number(expiresAt) : true
+  const hasToken = !!sessionStorage.getItem('accessToken') && !isExpired
 
   if (!hasToken) return <Navigate to="/login" replace />
 

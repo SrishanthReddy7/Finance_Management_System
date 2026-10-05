@@ -16,10 +16,10 @@ const STATUS_CHIPS = [
   { label: 'All', value: '' },
   { label: 'Draft', value: 'DRAFT' },
   { label: 'Submitted', value: 'SUBMITTED' },
-  { label: 'Manager Approved', value: 'MANAGER_APPROVED' },
-  { label: 'Finance Approved', value: 'FINANCE_APPROVED' },
-  { label: 'Returned', value: 'RETURNED' },
+  { label: 'Approved', value: 'APPROVED' },
   { label: 'Paid', value: 'PAID' },
+  { label: 'Returned', value: 'RETURNED' },
+  { label: 'Rejected', value: 'REJECTED' },
 ]
 
 const currentYear = new Date().getFullYear()
@@ -28,6 +28,8 @@ export default function MyExpenses() {
   const { user, can } = useAuth()
   const navItems = buildNavItems(user, can)
 
+  const isPrivileged = user?.roleType === 'SUPER_ADMIN' || can('APPROVE_EXPENSE') || can('VERIFY_EXPENSE')
+  const [scope, setScope] = useState(isPrivileged ? 'all' : 'mine')
   const [statusFilter, setStatusFilter] = useState('')
   const [allRows, setAllRows] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -38,17 +40,17 @@ export default function MyExpenses() {
     setIsLoading(true)
     setError('')
     try {
-      // No `mine=true` query param exists server-side -- the list is scoped
-      // by role (own / reviewable team / company-wide) and filtered down to
-      // this employee's own claims here. pageSize is generously large since
-      // there's no dedicated "my claims" endpoint to paginate against yet.
       const { rows } = await expensesApi.listClaims({
         status: statusFilter || undefined,
         pageSize: 100,
       })
-      setAllRows(rows.filter((row) => row.employeeId === user?.employee?.id))
+      if (scope === 'mine') {
+        setAllRows(rows.filter((row) => row.employeeId === user?.employee?.id))
+      } else {
+        setAllRows(rows)
+      }
     } catch (err) {
-      setError(unwrapError(err, 'Could not load your expenses.'))
+      setError(unwrapError(err, 'Could not load expenses.'))
     } finally {
       setIsLoading(false)
     }
@@ -57,11 +59,21 @@ export default function MyExpenses() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
+  }, [statusFilter, scope])
 
   const { pendingCount, approvedTotal, reimbursedTotal } = computeExpenseStats(allRows)
 
   const columns = [
+    ...(scope === 'all'
+      ? [
+          {
+            key: 'employee',
+            label: 'Employee',
+            render: (row) =>
+              row.employee ? `${row.employee.firstName} ${row.employee.lastName}` : '—',
+          },
+        ]
+      : []),
     { key: 'purpose', label: 'Purpose' },
     { key: 'category', label: 'Category', render: (row) => row.category?.name || '—' },
     { key: 'expenseDate', label: 'Date', render: (row) => formatDate(row.expenseDate) },
@@ -103,9 +115,12 @@ export default function MyExpenses() {
   return (
     <AppShell
       navItems={navItems}
-      title="My Expenses"
-
-      subtitle="Your submitted expense claims and their approval status."
+      title={isPrivileged && scope === 'all' ? 'Expense Management' : 'My Expenses'}
+      subtitle={
+        isPrivileged && scope === 'all'
+          ? 'Manage and monitor all expense claims across the organization.'
+          : 'Your submitted expense claims and their approval status.'
+      }
       topbarActions={
         <Link
           to="/expenses/new"
@@ -117,16 +132,43 @@ export default function MyExpenses() {
       }
     >
       <div className="flex flex-col gap-6">
+        {isPrivileged && (
+          <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => setScope('all')}
+              className="rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+              style={{
+                background: scope === 'all' ? 'var(--accent)' : 'var(--surface-muted, #f1f5f9)',
+                color: scope === 'all' ? '#fff' : 'var(--ink-muted)',
+              }}
+            >
+              {user?.roleType === 'SUPER_ADMIN' || can('VERIFY_EXPENSE') ? 'All Claims (Admin)' : 'Team Claims'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('mine')}
+              className="rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors"
+              style={{
+                background: scope === 'mine' ? 'var(--accent)' : 'var(--surface-muted, #f1f5f9)',
+                color: scope === 'mine' ? '#fff' : 'var(--ink-muted)',
+              }}
+            >
+              My Claims Only
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
           <StatCard label="Pending Claims" value={String(pendingCount)} sublabel="Awaiting a decision" sublabelColor="warning" />
           <StatCard
-            label="Approved This Year"
+            label="Approved Claims"
             value={formatCurrency(approvedTotal)}
             sublabel={`${currentYear}`}
             sublabelColor="success"
           />
           <StatCard
-            label="Reimbursed This Year"
+            label="Paid Expenses"
             value={formatCurrency(reimbursedTotal)}
             sublabel={`${currentYear}`}
             sublabelColor="muted"
@@ -163,7 +205,7 @@ export default function MyExpenses() {
           </p>
         ) : allRows.length === 0 ? (
           <p className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>
-            No expense claims yet.
+            No expense claims found.
           </p>
         ) : (
           <DataTable columns={columns} rows={allRows} />

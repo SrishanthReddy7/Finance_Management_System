@@ -23,7 +23,8 @@ import { PayoutProviderError } from "../../integrations/payout-provider/payout-p
  */
 export function redactAccount(account) {
   if (!account) return account;
-  const { accountNumberEncrypted, ...rest } = account;
+  const rest = { ...account };
+  delete rest.accountNumberEncrypted;
   return {
     ...rest,
     maskedAccountNumber: account.accountNumberLast4 ? `••••${account.accountNumberLast4}` : null,

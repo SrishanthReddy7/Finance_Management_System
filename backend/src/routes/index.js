@@ -22,9 +22,11 @@ import budgetRoutes, { budgetReportRoutes } from "../modules/budgets/budget.rout
 import reportRoutes from "../modules/reports/report.routes.js";
 import paymentRoutes, { paymentWebhookRoutes } from "../modules/payments/payment.routes.js";
 import payoutRoutes, { employeePayoutAccountRoutes, payoutWebhookRoutes } from "../modules/payouts/payout.routes.js";
+import notificationRoutes from "../modules/notifications/notification.routes.js";
 
 const router = Router();
 
+router.use("/notifications", notificationRoutes);
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/employees", employeeRoutes);

@@ -615,7 +615,24 @@ export async function listClaims(actingUser, { skip, take, status, projectId }) 
   let where = scopeWhere;
 
   // Section 31: lets an approver pull "the queue of pending claims to review".
-  if (status) where = { ...where, status };
+  if (status) {
+    const s = String(status).toUpperCase().trim();
+    if (s === "APPROVED") {
+      where = {
+        ...where,
+        status: { in: ["MANAGER_APPROVED", "FINANCE_APPROVED", "REIMBURSEMENT_PENDING"] },
+      };
+    } else if (s === "PAID" || s === "REIMBURSED") {
+      where = { ...where, status: "PAID" };
+    } else if (s === "REJECTED") {
+      where = {
+        ...where,
+        status: { in: ["MANAGER_REJECTED", "FINANCE_REJECTED"] },
+      };
+    } else {
+      where = { ...where, status: s };
+    }
+  }
   // FRS 11.3, "Project/client association ... lets Finance later compute how
   // much did we spend on Project X". The project-side rollup in
   // projects/project.service.js aggregates the same data; this is the

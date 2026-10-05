@@ -72,7 +72,7 @@ export default function ReportsHub() {
                   {showIcons ? (
                     <span className="flex items-center justify-between gap-3">
                       <span className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: '#EAF1FF', color: '#1D5FE8' }}>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                           <FileText size={18} />
                         </span>
                         {card.label}

@@ -73,12 +73,14 @@ export async function getReceiptObjectUrl(claimId, receiptId) {
 }
 
 export async function managerReview(id, decision, comment) {
-  const res = await api.patch(`/expenses/${id}/manager-review`, { decision, comment })
+  const norm = decision === 'APPROVED' ? 'APPROVE' : (decision === 'REJECTED' ? 'REJECT' : decision)
+  const res = await api.patch(`/expenses/${id}/manager-review`, { decision: norm, comment })
   return unwrap(res)
 }
 
 export async function financeReview(id, decision, comment) {
-  const res = await api.patch(`/expenses/${id}/finance-review`, { decision, comment })
+  const norm = decision === 'APPROVED' ? 'APPROVE' : (decision === 'REJECTED' ? 'REJECT' : decision)
+  const res = await api.patch(`/expenses/${id}/finance-review`, { decision: norm, comment })
   return unwrap(res)
 }
 

@@ -35,7 +35,7 @@ export async function authenticate(req, res, next) {
     };
 
     next();
-  } catch (err) {
+  } catch {
     return fail(res, 401, "Invalid or expired token.");
   }
 }

@@ -12,7 +12,25 @@ export const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.corsOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. native mobile apps, Postman)
+      if (!origin) return callback(null, true);
+      // In development, automatically allow localhost & LAN Wi-Fi IPs on any port (Vite, Metro 8081, Expo, etc.)
+      if (!env.isProduction) {
+        if (
+          /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+          /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+          /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+          /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin)
+        ) {
+          return callback(null, true);
+        }
+      }
+      if (env.corsOrigin.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );

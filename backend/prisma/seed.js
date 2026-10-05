@@ -101,7 +101,14 @@ const ROLE_DEFINITIONS = {
     "MANAGE_PAYOUT_ACCOUNTS",
     "VIEW_FINANCIAL_REPORTS",
   ],
-  "HR Admin": ["VIEW_EMPLOYEE", "VIEW_COMPANY_SALARY", "MANAGE_SALARY", "CREATE_EMPLOYEE", "MANAGE_USERS"],
+  "HR Admin": [
+    "VIEW_EMPLOYEE",
+    "VIEW_COMPANY_SALARY",
+    "MANAGE_SALARY",
+    "CREATE_EMPLOYEE",
+    "MANAGE_USERS",
+    "CREATE_ADMIN",
+  ],
 };
 
 async function upsertPermissions() {
@@ -196,6 +203,11 @@ async function main() {
     update: {},
     create: { name: "Finance" },
   });
+  const hrDept = await prisma.department.upsert({
+    where: { name: "Human Resources" },
+    update: {},
+    create: { name: "Human Resources" },
+  });
 
   console.log("Seeding expense categories...");
   // FRS 11.3 "Expense limits": soft limit warns the approver, hard limit blocks
@@ -224,7 +236,7 @@ async function main() {
     employeeCode: "EMP-001",
   });
 
-  const financeAdmin = await createUserWithEmployee({
+  await createUserWithEmployee({
     email: "finance@company.test",
     password: "Passw0rd!123",
     roleType: "ADMIN",
@@ -292,8 +304,23 @@ async function main() {
     createdById: teamLead.id,
   });
 
+  await createUserWithEmployee({
+    email: "hr@company.test",
+    password: "Passw0rd!123",
+    roleType: "ADMIN",
+    roleId: roles["HR Admin"].id,
+    firstName: "Ananya",
+    lastName: "Deshmukh",
+    designation: "HR Admin",
+    employeeCode: "EMP-007",
+    departmentId: hrDept.id,
+    managerId: ceo.employee.id,
+    createdById: ceo.id,
+  });
+
   console.log("Seeded users (all password: Passw0rd!123):");
   console.log("  ceo@company.test          (SUPER_ADMIN)");
+  console.log("  hr@company.test           (ADMIN / HR Admin)");
   console.log("  finance@company.test      (ADMIN / Finance Admin)");
   console.log("  manager@company.test      (ADMIN / Manager)");
   console.log("  teamlead@company.test     (ADMIN / Team Lead) -- reports to manager");

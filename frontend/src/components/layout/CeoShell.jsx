@@ -85,13 +85,32 @@ const VARIANTS = {
     // Any other nav item this Manager is permitted to see (none today) still gets listed
     catchAll: 'More',
   },
+  hr: {
+    fallbackName: 'HR Admin',
+    groups: [
+      { title: 'Overview', labels: ['Dashboard'] },
+      { title: 'Workforce', labels: ['HR Portal', 'Employee Directory', 'Org & Teams'] },
+      { title: 'Compensation', labels: ['Salary Structures', 'Payroll'] },
+      { title: 'Workspace', labels: ['My Expenses', 'My Payslips'] },
+      { title: 'Insights', labels: ['Reports'] },
+    ],
+    labelOverrides: { 'HR Portal': 'HR Admin Hub' },
+    also: {
+      'HR Portal': ['/hr-admin'],
+      'Employee Directory': ['/employees'],
+      'Org & Teams': ['/org-teams'],
+      'Salary Structures': ['/salary-structures'],
+      Payroll: ['/payroll'],
+    },
+    catchAll: 'More',
+  },
 }
 
 const COLLAPSE_KEY = 'ceoSidebarCollapsed'
 
 function readCollapsed() {
   try {
-    return localStorage.getItem(COLLAPSE_KEY) === '1'
+    return sessionStorage.getItem(COLLAPSE_KEY) === '1'
   } catch {
     return false
   }
@@ -115,12 +134,12 @@ function findActiveLabel(items, pathname, also) {
 
 function Brand({ collapsed }) {
   return collapsed ? (
-    // Collapsed rail: show just the shield mark (the wordmark is illegible at this size)
+    // Collapsed rail: show just the shield mark
     <span className="block h-10 w-11 overflow-hidden">
-      <img src="/saanvika-logo.png" alt="Saanvika Solutions" className="max-w-none" style={{ width: 120, marginLeft: -38, marginTop: -2, filter: 'brightness(1.35) saturate(1.1)' }} />
+      <img src="/saanvika-logo.png" alt="Saanvika Solutions" className="max-w-none" style={{ width: 120, marginLeft: -38, marginTop: -2, filter: 'brightness(1.2) contrast(1.05)' }} />
     </span>
   ) : (
-    <img src="/saanvika-logo.png" alt="Saanvika Solutions" className="h-20 w-auto" style={{ filter: 'brightness(1.35) saturate(1.1)' }} />
+    <img src="/saanvika-logo.png" alt="Saanvika Solutions" className="h-16 w-auto" style={{ filter: 'brightness(1.2) contrast(1.05)' }} />
   )
 }
 
@@ -141,9 +160,9 @@ function SidebarBody({ groups, activeLabel, collapsed, onNavigate }) {
         {groups.map((group) => (
           <div key={group.title} className="mt-4">
             {collapsed ? (
-              <div className="mx-3 mb-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+              <div className="mx-3 mb-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
             ) : (
-              <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--ink-faint)' }}>
+              <div className="mb-1.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                 {group.title}
               </div>
             )}
@@ -158,15 +177,26 @@ function SidebarBody({ groups, activeLabel, collapsed, onNavigate }) {
                     onClick={onNavigate}
                     data-active={isActive}
                     title={collapsed ? item.display : undefined}
-                    className={`flex items-center gap-3 rounded-xl py-2.5 text-[13px] font-medium transition-colors hover:bg-white/5 ${collapsed ? 'justify-center px-0' : 'px-3'}`}
+                    className={`group relative flex items-center gap-3 rounded-xl py-2.5 text-[13px] font-medium transition-all ${
+                      collapsed ? 'justify-center px-0' : 'px-3'
+                    }`}
                     style={{
-                      background: isActive ? 'var(--sidebar-active-bg)' : undefined,
+                      background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
                       color: isActive ? 'var(--sidebar-ink-active)' : 'var(--sidebar-ink)',
-                      boxShadow: isActive ? '0 6px 16px rgba(29,95,232,0.35)' : undefined,
+                      boxShadow: isActive ? '0 4px 14px rgba(37,99,235,0.32)' : undefined,
                     }}
                   >
-                    {Icon && <Icon size={18} strokeWidth={2} />}
-                    {!collapsed && item.display}
+                    {Icon && (
+                      <Icon
+                        size={18}
+                        strokeWidth={isActive ? 2.2 : 1.8}
+                        className={isActive ? 'text-white' : 'text-slate-400 transition-colors group-hover:text-slate-200'}
+                      />
+                    )}
+                    {!collapsed && <span>{item.display}</span>}
+                    {isActive && !collapsed && (
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white/90 shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                    )}
                   </Link>
                 )
               })}
@@ -174,8 +204,6 @@ function SidebarBody({ groups, activeLabel, collapsed, onNavigate }) {
           </div>
         ))}
       </nav>
-      {/* Profile / Log out live only in the header's name dropdown (see the
-          menuOpen block below) -- no longer duplicated as a sidebar footer. */}
     </>
   )
 }
@@ -205,7 +233,7 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
     const next = !collapsed
     setCollapsed(next)
     try {
-      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
+      sessionStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
     } catch {
       /* ignore */
     }
@@ -246,12 +274,19 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
     <div
       data-theme={variant}
       className="flex min-h-screen"
-      style={{ background: 'linear-gradient(160deg, #E8F0FF 0%, #F3F7FF 45%, #EAF2FF 100%)', color: 'var(--ink)' }}
+      style={{
+        background: 'radial-gradient(ellipse at 12% 0%, rgba(37, 99, 235, 0.035) 0px, transparent 55%), radial-gradient(ellipse at 88% 0%, rgba(99, 102, 241, 0.03) 0px, transparent 55%), #F8FAFC',
+        color: 'var(--ink)',
+      }}
     >
       {/* Desktop sidebar */}
       <aside
-        className="fixed inset-y-0 left-0 z-30 hidden flex-col transition-[width] duration-200 lg:flex"
-        style={{ width: collapsed ? 76 : 250, background: 'var(--sidebar-bg)' }}
+        className="fixed inset-y-0 left-0 z-30 hidden flex-col border-r transition-[width] duration-200 lg:flex"
+        style={{
+          width: collapsed ? 76 : 252,
+          background: 'var(--sidebar-bg)',
+          borderColor: 'rgba(255, 255, 255, 0.06)',
+        }}
       >
         <SidebarBody {...sidebarProps} collapsed={collapsed} />
       </aside>
@@ -259,13 +294,13 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setDrawerOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[272px] flex-col" style={{ background: 'var(--sidebar-bg)' }}>
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-[272px] flex-col border-r border-white/10" style={{ background: 'var(--sidebar-bg)' }}>
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
               aria-label="Close menu"
-              className="absolute right-3 top-3 rounded-lg p-1.5 text-white/70 hover:bg-white/10"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-white/70 hover:bg-white/10 transition-colors"
             >
               <X size={18} />
             </button>
@@ -274,17 +309,21 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
         </div>
       )}
 
-      <style>{`@media (min-width:1024px){ .ceo-main{ margin-left:${collapsed ? 76 : 250}px } }`}</style>
+      <style>{`@media (min-width:1024px){ .ceo-main{ margin-left:${collapsed ? 76 : 252}px } }`}</style>
       <div className="ceo-main flex min-w-0 flex-1 flex-col transition-[margin] duration-200">
         <header
-          className="sticky top-0 z-20 flex min-h-[76px] flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap px-4 py-3 sm:px-8"
-          style={{ background: 'rgba(238,244,255,0.85)', backdropFilter: 'blur(8px)' }}
+          className="sticky top-0 z-20 flex min-h-[72px] flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap px-4 py-3 sm:px-8 border-b transition-colors"
+          style={{
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(12px)',
+            borderColor: 'rgba(226, 232, 240, 0.8)',
+          }}
         >
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setDrawerOpen(true)}
-            className="rounded-xl bg-white p-2.5 shadow-sm lg:hidden"
+            className="rounded-xl border border-slate-200/80 bg-white/90 p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
           >
             <Menu size={18} />
           </button>
@@ -292,25 +331,25 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
             type="button"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             onClick={toggleCollapsed}
-            className="hidden rounded-xl bg-white p-2.5 shadow-sm lg:block"
+            className="hidden rounded-xl border border-slate-200/80 bg-white/90 p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 lg:block"
           >
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
 
           <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
             {crumbs.length > 0 && (
-              <nav aria-label="Breadcrumb" className="mb-0.5 flex flex-wrap items-center gap-1 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+              <nav aria-label="Breadcrumb" className="mb-0.5 flex flex-wrap items-center gap-1 text-[11.5px] font-medium" style={{ color: 'var(--ink-faint)' }}>
                 {crumbs.map((c, i) => (
                   <span key={i} className="flex items-center gap-1">
-                    {i > 0 && <ChevronRight size={12} />}
+                    {i > 0 && <ChevronRight size={11} className="text-slate-400" />}
                     <span style={i === crumbs.length - 1 ? { color: 'var(--ink-muted)', fontWeight: 600 } : undefined}>{c}</span>
                   </span>
                 ))}
               </nav>
             )}
-            <h1 className="truncate text-xl font-bold sm:text-2xl">{title}</h1>
+            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl text-slate-900">{title}</h1>
             {headerSubtitle && (
-              <p className="truncate text-[13px]" style={{ color: 'var(--ink-muted)' }}>
+              <p className="truncate text-[13px] font-normal" style={{ color: 'var(--ink-muted)' }}>
                 {headerSubtitle}
               </p>
             )}
@@ -323,30 +362,30 @@ export default function CeoShell({ variant = 'ceo', navItems = [], title, subtit
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               aria-expanded={menuOpen}
-              className="flex items-center gap-2.5 rounded-2xl bg-white py-1.5 pl-1.5 pr-3 shadow-sm"
+              className="flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/90 py-1 pl-1 pr-3 shadow-sm transition hover:bg-slate-50"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ background: 'var(--accent)' }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm" style={{ background: 'var(--accent)' }}>
                 {initial}
               </span>
               {cfg.showRole ? (
                 <span className="hidden text-left sm:block">
-                  <span className="block text-[13px] font-semibold leading-tight">{displayName}</span>
-                  <span className="block text-[11px] leading-tight" style={{ color: 'var(--ink-muted)' }}>
+                  <span className="block text-[13px] font-semibold leading-tight text-slate-900">{displayName}</span>
+                  <span className="block text-[11px] font-medium leading-tight" style={{ color: 'var(--ink-muted)' }}>
                     {user?.roleName || cfg.fallbackName}
                   </span>
                 </span>
               ) : (
-                <span className="hidden text-[13px] font-semibold sm:block">{displayName}</span>
+                <span className="hidden text-[13px] font-semibold sm:block text-slate-900">{displayName}</span>
               )}
-              <ChevronDown size={16} color="var(--ink-muted)" />
+              <ChevronDown size={15} color="var(--ink-muted)" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border bg-white p-1.5 shadow-xl" style={{ borderColor: 'var(--border)' }}>
-                <Link to={profileHref} className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] hover:bg-slate-50">
-                  <UserCircle size={16} /> Profile
+              <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border bg-white p-1.5 shadow-xl transition-all" style={{ borderColor: 'var(--border)' }}>
+                <Link to={profileHref} className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                  <UserCircle size={16} className="text-slate-400" /> Profile
                 </Link>
-                <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-slate-50">
-                  <LogOut size={16} /> Log out
+                <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+                  <LogOut size={16} className="text-rose-500" /> Log out
                 </button>
               </div>
             )}

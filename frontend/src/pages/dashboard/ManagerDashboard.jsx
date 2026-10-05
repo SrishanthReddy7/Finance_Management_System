@@ -35,7 +35,7 @@ function SectionHeader({ icon, title, to }) {
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <IconTile icon={icon} color="#1D5FE8" bg="#EAF1FF" />
+        <IconTile icon={icon} color="#2563EB" bg="#EFF6FF" />
         <h3 className="text-[17px] font-bold">{title}</h3>
       </div>
       {to && (
@@ -127,7 +127,7 @@ export default function ManagerDashboard() {
       )}
 
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={FileText} color="#1D5FE8" bg="#EAF1FF" label="Team Expenses" value={formatCurrency(thisMonthTotal)} sublabel="This month" to="/reports/employee-reimbursement" />
+        <KpiCard icon={FileText} color="#2563EB" bg="#EFF6FF" label="Team Expenses" value={formatCurrency(thisMonthTotal)} sublabel="This month" to="/reports/employee-reimbursement" />
         <KpiCard icon={Clock} color="#7C3AED" bg="#F1EBFE" label="Pending Approvals" value={String(pendingApprovalRows.length)} sublabel="Awaiting review" sublabelColor="var(--warning)" to="/expenses/approvals" />
         <KpiCard
           icon={TrendingUp} color="#16A34A" bg="#E8F8EE" label="Avg Project Budget Utilization"
@@ -221,7 +221,7 @@ export default function ManagerDashboard() {
             {QUICK_REPORTS.map((report) => (
               <Link key={report.label} to={report.href} className="flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-[14px] font-semibold hover:bg-blue-50" style={{ borderColor: 'var(--border)' }}>
                 <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: '#EAF1FF', color: '#1D5FE8' }}>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: '#EFF6FF', color: '#2563EB' }}>
                     <FileText size={16} />
                   </span>
                   {report.label}

@@ -110,8 +110,8 @@ export default function EmployeeDashboard({ user }) {
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           icon={Wallet}
-          color="#1D5FE8"
-          bg="#EAF1FF"
+          color="#2563EB"
+          bg="#EFF6FF"
           label="Net Salary (Latest Payslip)"
           value={formatCurrency(latestPayslip?.netSalary ?? 0)}
           sublabel={latestPayslip ? `${latestPayslip.periodMonth}/${latestPayslip.periodYear}${payslipStatus ? ` · ${payslipStatus}` : ''}` : 'No payslips yet'}

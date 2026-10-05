@@ -1,9 +1,11 @@
 import { api } from './client'
 import { unwrap } from './unwrap'
 
-export async function listRuns({ status, page, pageSize } = {}) {
+export async function listRuns({ status, periodYear, periodMonth, page, pageSize } = {}) {
   const params = {}
   if (status) params.status = status
+  if (periodYear) params.periodYear = periodYear
+  if (periodMonth) params.periodMonth = periodMonth
   if (page) params.page = page
   if (pageSize) params.pageSize = pageSize
   const res = await api.get('/payroll/runs', { params })
@@ -51,9 +53,12 @@ export async function markPayslipFailed(runId, payslipId, reason) {
 }
 
 // Hierarchy-gated same as salary structure (404, not 403, when denied).
-export async function listEmployeePayslips(employeeId, { periodYear } = {}) {
+export async function listEmployeePayslips(employeeId, { periodYear, periodMonth, paymentStatus, status } = {}) {
   const params = {}
   if (periodYear) params.periodYear = periodYear
+  if (periodMonth) params.periodMonth = periodMonth
+  if (paymentStatus) params.paymentStatus = paymentStatus
+  if (status) params.status = status
   const res = await api.get(`/employees/${employeeId}/payslips`, { params })
   return unwrap(res)
 }

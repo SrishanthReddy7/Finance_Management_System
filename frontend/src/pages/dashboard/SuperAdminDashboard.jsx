@@ -28,7 +28,7 @@ const RANGE_OPTIONS = [
   { label: 'Last 12 Months', months: 12 },
 ]
 const SLICES = [
-  { key: 'payroll', label: 'Salaries (Payroll)', color: '#2a78d6' },
+  { key: 'payroll', label: 'Salaries (Payroll)', color: '#2563EB' },
   { key: 'vendorBills', label: 'Vendor Bills', color: '#7C3AED' },
   { key: 'expenses', label: 'Employee Expenses', color: '#38BDF8' },
 ]
@@ -262,7 +262,7 @@ export default function SuperAdminDashboard() {
     <div className="flex flex-col gap-5">
       {/* KPIs */}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={BarChart3} color="#1D5FE8" bg="#EAF1FF" label="Revenue (MTD)" value={fs?.revenue ?? 0} change={cmp ? pctChange(fs.revenue, cmp.revenue) : null} />
+        <KpiCard icon={BarChart3} color="#2563EB" bg="#EFF6FF" label="Revenue (MTD)" value={fs?.revenue ?? 0} change={cmp ? pctChange(fs.revenue, cmp.revenue) : null} />
         <KpiCard icon={Wallet} color="#7C3AED" bg="#F1EBFE" label="Expenses (MTD)" value={costs?.total ?? 0} change={cmp ? pctChange(costs?.total, cmp.expenses) : null} higherIsBetter={false} />
         <KpiCard icon={TrendingUp} color="#16A34A" bg="#E8F8EE" label="Profit (MTD)" value={fs?.profit ?? 0} change={cmp ? pctChange(fs.profit, cmp.profit) : null} />
         <KpiCard icon={Banknote} color="#EA580C" bg="#FFF0E3" label="Net Cash Flow (MTD)" value={fs?.cashFlow?.netCashFlow ?? 0} change={null} />
@@ -273,8 +273,8 @@ export default function SuperAdminDashboard() {
         <Card className="xl:col-span-3">
           <CardHeader
             icon={BarChart3}
-            color="#1D5FE8"
-            bg="#EAF1FF"
+            color="#2563EB"
+            bg="#EFF6FF"
             title="Cash In vs Cash Out"
             right={
               <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ export default function SuperAdminDashboard() {
         </Card>
 
         <Card className="xl:col-span-2">
-          <CardHeader icon={PieIcon} color="#1D5FE8" bg="#EAF1FF" title="Expense Distribution" right={<span className="text-[12px]" style={{ color: 'var(--ink-muted)' }}>This month</span>} />
+          <CardHeader icon={PieIcon} color="#2563EB" bg="#EFF6FF" title="Expense Distribution" right={<span className="text-[12px]" style={{ color: 'var(--ink-muted)' }}>This month</span>} />
           {pieTotal === 0 ? (
             <p className="py-16 text-center text-[13px]" style={{ color: 'var(--ink-faint)' }}>No expenses recorded this month.</p>
           ) : (
@@ -350,7 +350,7 @@ export default function SuperAdminDashboard() {
       {/* AR / AP / GST / Projects */}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryTile
-          icon={Users} color="#1D5FE8" bg="#EAF1FF" label="Accounts Receivable" to="/invoices"
+          icon={Users} color="#2563EB" bg="#EFF6FF" label="Accounts Receivable" to="/invoices"
           value={wholeRupees.format(outstanding?.summary?.totalOutstanding ?? 0)}
           sub={`${outstanding?.summary?.invoiceCount ?? 0} open invoice${outstanding?.summary?.invoiceCount === 1 ? '' : 's'}`}
         />
@@ -360,7 +360,7 @@ export default function SuperAdminDashboard() {
           sub={`Overdue: ${formatCurrency(payable?.summary?.overdueOutstanding ?? 0)}`}
         />
         <SummaryTile
-          icon={Percent} color="#1D5FE8" bg="#EAF1FF" label="Net GST Payable (MTD)" to="/gst"
+          icon={Percent} color="#2563EB" bg="#EFF6FF" label="Net GST Payable (MTD)" to="/gst"
           value={wholeRupees.format(gstSummary?.summary?.net?.payable ?? 0)}
           sub={latestGstPeriod ? <span className="flex items-center gap-2">Latest period <StatusBadge status={latestGstPeriod.status} entity="gstFiling" /></span> : 'No filing periods yet'}
         />
@@ -374,7 +374,7 @@ export default function SuperAdminDashboard() {
       {/* Recent invoices + activities */}
       <div className="grid gap-5 xl:grid-cols-5">
         <Card className="xl:col-span-3">
-          <CardHeader icon={FileText} color="#1D5FE8" bg="#EAF1FF" title="Recent Invoices" right={<ViewAll to="/invoices" />} />
+          <CardHeader icon={FileText} color="#2563EB" bg="#EFF6FF" title="Recent Invoices" right={<ViewAll to="/invoices" />} />
           {recentInvoices === null ? (
             <p className="py-8 text-center text-[13px]" style={{ color: 'var(--ink-muted)' }}>Loading…</p>
           ) : recentInvoices.length === 0 ? (
@@ -406,7 +406,7 @@ export default function SuperAdminDashboard() {
         </Card>
 
         <Card className="xl:col-span-2">
-          <CardHeader icon={Clock} color="#1D5FE8" bg="#EAF1FF" title="Recent Activities" right={<ViewAll to="/audit-logs" />} />
+          <CardHeader icon={Clock} color="#2563EB" bg="#EFF6FF" title="Recent Activities" right={<ViewAll to="/audit-logs" />} />
           {activities === null ? (
             <p className="py-8 text-center text-[13px]" style={{ color: 'var(--ink-muted)' }}>Loading…</p>
           ) : activities.length === 0 ? (
