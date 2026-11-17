@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, shadows } from '../../components/theme';
@@ -22,6 +23,9 @@ const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug',
 const FULL_MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function PayslipsScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const { user } = useAuth();
   const [payslips, setPayslips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -278,7 +282,7 @@ export default function PayslipsScreen() {
           data={payslips}
           keyExtractor={(item, index) => (item?.id ? `payslip-${item.id}-${index}` : `payslip-${index}`)}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, isTablet && styles.tabletListContent]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -611,6 +615,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+  },
+  tabletListContent: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   centerContainer: {
     flex: 1,

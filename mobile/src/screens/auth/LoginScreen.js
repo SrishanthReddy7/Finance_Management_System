@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, shadows } from '../../components/theme';
@@ -18,6 +19,10 @@ import { testConnection } from '../../api/client';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isSmallDevice = width < 360;
+
   const {
     login,
     forgotPassword,
@@ -164,12 +169,15 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isTablet && styles.tabletScrollContent,
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
           <View style={styles.logoBadge}>
-            <Ionicons name="wallet" size={34} color={colors.textInverse} />
+            <Ionicons name="wallet" size={32} color={colors.textInverse} />
           </View>
           <Text style={styles.title}>Finance Hub</Text>
           <Text style={styles.subtitle}>
@@ -177,11 +185,12 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, isTablet && styles.tabletCard]}>
           <Text style={styles.formTitle}>Sign in to your account</Text>
 
           {!!error && (
             <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={16} color={colors.danger} style={{ marginRight: 6 }} />
               <Text style={styles.errorBannerText}>{error}</Text>
             </View>
           )}
@@ -196,6 +205,9 @@ export default function LoginScreen() {
             }}
             keyboardType="email-address"
             autoCapitalize="none"
+            leadingIcon={
+              <Ionicons name="mail-outline" size={18} color={colors.textMuted} />
+            }
           />
 
           <Input
@@ -207,6 +219,9 @@ export default function LoginScreen() {
               if (error) setError('');
             }}
             secureTextEntry
+            leadingIcon={
+              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+            }
           />
 
           {/* Forgot password link */}
@@ -222,6 +237,7 @@ export default function LoginScreen() {
                 setConfirmPassword('');
                 setForgotModalVisible(true);
               }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.forgotPasswordText}>Forgot password?</Text>
             </TouchableOpacity>
@@ -231,6 +247,7 @@ export default function LoginScreen() {
             title="Sign In"
             onPress={handleLogin}
             loading={loading}
+            fullWidth
             style={styles.submitBtn}
           />
 
@@ -238,75 +255,39 @@ export default function LoginScreen() {
           <View style={styles.demoSection}>
             <Text style={styles.demoTitle}>Quick Fill Demo Credentials:</Text>
             <View style={styles.demoRow}>
-              <TouchableOpacity
-                style={styles.demoChip}
-                onPress={() => {
-                  setEmail('hr@company.test');
-                  setPassword('Passw0rd!123');
-                  setError('');
-                }}
-              >
-                <View style={styles.chipContent}>
-                  <Ionicons name="people-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.demoChipText}>HR Admin</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoChip}
-                onPress={() => {
-                  setEmail('ceo@company.test');
-                  setPassword('Passw0rd!123');
-                  setError('');
-                }}
-              >
-                <View style={styles.chipContent}>
-                  <Ionicons name="ribbon-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.demoChipText}>CEO</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoChip}
-                onPress={() => {
-                  setEmail('finance@company.test');
-                  setPassword('Passw0rd!123');
-                  setError('');
-                }}
-              >
-                <View style={styles.chipContent}>
-                  <Ionicons name="briefcase-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.demoChipText}>Finance</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoChip}
-                onPress={() => {
-                  setEmail('manager@company.test');
-                  setPassword('Passw0rd!123');
-                  setError('');
-                }}
-              >
-                <View style={styles.chipContent}>
-                  <Ionicons name="shield-checkmark-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.demoChipText}>Manager</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoChip}
-                onPress={() => {
-                  setEmail('employee.a@company.test');
-                  setPassword('Passw0rd!123');
-                  setError('');
-                }}
-              >
-                <View style={styles.chipContent}>
-                  <Ionicons name="person-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.demoChipText}>Employee A</Text>
-                </View>
-              </TouchableOpacity>
+              {[
+                { label: 'HR Admin', email: 'hr@company.test', icon: 'people-outline' },
+                { label: 'CEO', email: 'ceo@company.test', icon: 'ribbon-outline' },
+                { label: 'Finance', email: 'finance@company.test', icon: 'briefcase-outline' },
+                { label: 'Manager', email: 'manager@company.test', icon: 'shield-checkmark-outline' },
+                { label: 'Employee A', email: 'employee.a@company.test', icon: 'person-outline' },
+              ].map((chip) => {
+                const isActive = email === chip.email;
+                return (
+                  <TouchableOpacity
+                    key={chip.label}
+                    style={[styles.demoChip, isActive && styles.demoChipActive]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setEmail(chip.email);
+                      setPassword('Passw0rd!123');
+                      if (error) setError('');
+                    }}
+                  >
+                    <View style={styles.chipContent}>
+                      <Ionicons
+                        name={chip.icon}
+                        size={13}
+                        color={isActive ? colors.primaryDark : colors.textMuted}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={[styles.demoChipText, isActive && styles.demoChipTextActive]}>
+                        {chip.label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -319,9 +300,9 @@ export default function LoginScreen() {
             }}
           >
             <View style={styles.serverButtonRow}>
-              <Ionicons name="settings-outline" size={14} color={colors.textMuted} style={{ marginRight: 5 }} />
+              <Ionicons name="settings-outline" size={13} color={colors.textMuted} style={{ marginRight: 5 }} />
               <Text style={styles.serverButtonText}>
-                Server: <Text style={styles.serverUrlValue}>{serverUrl}</Text>
+                Server: <Text style={styles.serverUrlValue} numberOfLines={1}>{serverUrl}</Text>
               </Text>
             </View>
           </TouchableOpacity>
@@ -329,7 +310,7 @@ export default function LoginScreen() {
 
         <View style={styles.footerNote}>
           <Text style={styles.footerNoteText}>
-            Connects securely with the Finance Backend API
+            Protected by Enterprise Multi-Role Access Control
           </Text>
         </View>
       </ScrollView>
@@ -502,11 +483,11 @@ export default function LoginScreen() {
             <View style={styles.presetRow}>
               <TouchableOpacity
                 style={styles.presetChip}
-                onPress={() => setPreset('http://192.168.29.16:5000/api/v1')}
+                onPress={() => setPreset('http://192.168.1.34:5000/api/v1')}
               >
                 <View style={styles.presetChipContent}>
                   <Ionicons name="wifi-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.presetChipText}>Wi-Fi Phone (192.168.29.16)</Text>
+                  <Text style={styles.presetChipText}>Wi-Fi Phone (192.168.1.34)</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -596,6 +577,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  tabletScrollContent: {
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  tabletCard: {
+    padding: spacing.xl,
   },
   header: {
     alignItems: 'center',
@@ -689,6 +678,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  demoChipActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
   chipContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -697,6 +690,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.text,
+  },
+  demoChipTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   serverButton: {
     marginTop: spacing.md,

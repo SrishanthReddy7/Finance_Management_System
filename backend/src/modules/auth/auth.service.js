@@ -198,10 +198,11 @@ export async function resetPassword({ email, otp, newPassword }) {
     },
   });
 
-  await writeAuditLog(user, {
+  await writeAuditLog({
     action: "PASSWORD_RESET",
     entityType: "User",
     entityId: user.id,
+    performedById: user.id,
     note: "Password reset completed via OTP verification",
   }).catch(() => {});
 

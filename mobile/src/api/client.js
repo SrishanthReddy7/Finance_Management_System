@@ -34,6 +34,7 @@ const AUTH_ENDPOINTS = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/auth/refresh',
+  '/auth/me',
 ];
 
 api.interceptors.response.use(

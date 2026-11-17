@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,9 @@ import { unwrapError } from '../../api/unwrap';
 
 export default function ExpenseDetailScreen({ route }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const { claimId } = route.params;
   const { user, can } = useAuth();
 
@@ -183,6 +187,7 @@ export default function ExpenseDetailScreen({ route }) {
       style={styles.container}
       contentContainerStyle={[
         styles.scrollContent,
+        isTablet && styles.tabletScrollContent,
         { paddingBottom: Math.max(insets.bottom, 20) + 40 },
       ]}
     >
@@ -537,6 +542,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  tabletScrollContent: {
+    maxWidth: 760,
+    alignSelf: 'center',
+    width: '100%',
   },
   centerContainer: {
     flex: 1,

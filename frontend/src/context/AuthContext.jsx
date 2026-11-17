@@ -88,6 +88,9 @@ export function AuthProvider({ children }) {
 
   async function login(email, password, otp) {
     try {
+      sessionStorage.removeItem('sessionExpiresAt')
+      sessionStorage.removeItem('accessToken')
+      sessionStorage.removeItem('refreshToken')
       const payload = { email, password }
       if (otp) payload.otp = otp
       const loginRes = await api.post('/auth/login', payload)

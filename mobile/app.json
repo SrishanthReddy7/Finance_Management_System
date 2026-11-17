@@ -23,7 +23,9 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-asset",
+      "expo-font"
     ]
   }
 }

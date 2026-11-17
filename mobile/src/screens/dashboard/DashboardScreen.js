@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,19 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { colors, spacing, borderRadius, shadows } from '../../components/theme';
+import { colors, spacing, borderRadius, shadows, typography } from '../../components/theme';
 import StatusBadge from '../../components/StatusBadge';
 import Card from '../../components/Card';
 import { listClaims } from '../../api/expenses';
 
 export default function DashboardScreen({ navigation }) {
   const { user, can } = useAuth();
+  const { width } = useWindowDimensions();
+
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [recentClaims, setRecentClaims] = useState([]);
@@ -27,6 +30,18 @@ export default function DashboardScreen({ navigation }) {
     submittedCount: 0,
     paidCount: 0,
   });
+
+  // Responsive calculations
+  const isTablet = width >= 768;
+  const isSmallDevice = width < 360;
+
+  // Day greeting (Morning, Afternoon, Evening)
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -87,133 +102,184 @@ export default function DashboardScreen({ navigation }) {
     user?.roleName === 'HR Admin' ||
     user?.role?.name === 'HR Admin';
 
+  // Responsive tile sizing
+  const actionTileWidth = isTablet ? '23.5%' : isSmallDevice ? '100%' : '48.5%';
+  const metricCardWidth = isTablet ? '31.5%' : isSmallDevice ? '100%' : '31.5%';
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, isTablet && styles.tabletScrollContent]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
       }
     >
+      {/* ==================== HERO PROFILE HEADER ==================== */}
       <View style={styles.headerCard}>
         <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>
-            {user?.employee ? `${user.employee.firstName} ${user.employee.lastName}`.trim() : user?.name || user?.email?.split('@')[0] || 'User'}
+          <Text style={styles.greeting}>{greeting},</Text>
+          <Text style={styles.userName} numberOfLines={1}>
+            {user?.employee
+              ? `${user.employee.firstName} ${user.employee.lastName}`.trim()
+              : user?.name || user?.email?.split('@')[0] || 'User'}
           </Text>
           <View style={styles.roleRow}>
             <View style={styles.roleBadge}>
+              <View style={styles.roleDot} />
               <Text style={styles.roleText}>{user?.roleName || user?.roleType || 'Staff'}</Text>
             </View>
             {user?.employee?.department?.name && (
-              <Text style={styles.deptText}>• {user.employee.department.name}</Text>
+              <Text style={styles.deptText} numberOfLines={1}>
+                • {user.employee.department.name}
+              </Text>
             )}
           </View>
         </View>
-        <View style={styles.headerRightActions}>
-          <TouchableOpacity
-            style={styles.avatarButton}
-            onPress={() => navigation.navigate('ProfileTab')}
-          >
-            <Text style={styles.avatarLetter}>
-              {((user?.employee?.firstName || user?.name || user?.email || 'U')[0] || 'U').toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        </View>
+
+        <TouchableOpacity
+          style={styles.avatarButton}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('ProfileTab')}
+        >
+          <Text style={styles.avatarLetter}>
+            {((user?.employee?.firstName || user?.name || user?.email || 'U')[0] || 'U').toUpperCase()}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.metricsRow}>
+      {/* ==================== FINANCIAL METRICS ROW ==================== */}
+      <View style={[styles.metricsRow, isSmallDevice && styles.metricsRowStacked]}>
         <TouchableOpacity
-          style={[styles.metricCard, { borderLeftColor: colors.warning }]}
-          activeOpacity={0.7}
+          style={[styles.metricCard, { width: metricCardWidth, borderLeftColor: colors.warning }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'SUBMITTED' })}
         >
-          <Text style={styles.metricLabel}>Pending</Text>
-          <Text style={styles.metricValue}>₹{stats.pendingExpenses.toLocaleString('en-IN')}</Text>
-          <Text style={styles.metricSub}>{stats.submittedCount} to review</Text>
+          <View style={styles.metricHeaderRow}>
+            <Text style={styles.metricLabel}>Pending</Text>
+            <View style={[styles.metricDot, { backgroundColor: colors.warning }]} />
+          </View>
+          <Text
+            style={[styles.metricValue, isSmallDevice && { fontSize: 16 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            ₹{stats.pendingExpenses.toLocaleString('en-IN')}
+          </Text>
+          <Text style={styles.metricSub}>{stats.submittedCount} awaiting review</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.metricCard, { borderLeftColor: colors.info }]}
-          activeOpacity={0.7}
+          style={[styles.metricCard, { width: metricCardWidth, borderLeftColor: colors.info }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'APPROVED' })}
         >
-          <Text style={styles.metricLabel}>Approved</Text>
-          <Text style={styles.metricValue}>₹{stats.totalApproved.toLocaleString('en-IN')}</Text>
+          <View style={styles.metricHeaderRow}>
+            <Text style={styles.metricLabel}>Approved</Text>
+            <View style={[styles.metricDot, { backgroundColor: colors.info }]} />
+          </View>
+          <Text
+            style={[styles.metricValue, isSmallDevice && { fontSize: 16 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            ₹{stats.totalApproved.toLocaleString('en-IN')}
+          </Text>
           <Text style={styles.metricSub}>Ready to pay</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.metricCard, { borderLeftColor: colors.success }]}
-          activeOpacity={0.7}
+          style={[styles.metricCard, { width: metricCardWidth, borderLeftColor: colors.success }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'PAID' })}
         >
-          <Text style={styles.metricLabel}>Paid</Text>
-          <Text style={styles.metricValue}>₹{stats.totalPaid.toLocaleString('en-IN')}</Text>
+          <View style={styles.metricHeaderRow}>
+            <Text style={styles.metricLabel}>Paid</Text>
+            <View style={[styles.metricDot, { backgroundColor: colors.success }]} />
+          </View>
+          <Text
+            style={[styles.metricValue, isSmallDevice && { fontSize: 16 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            ₹{stats.totalPaid.toLocaleString('en-IN')}
+          </Text>
           <Text style={styles.metricSub}>{stats.paidCount} reimbursed</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      {/* ==================== QUICK ACTIONS GRID ==================== */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+      </View>
+
       <View style={styles.actionsGrid}>
         <TouchableOpacity
-          style={styles.actionTile}
-          activeOpacity={0.7}
+          style={[styles.actionTile, { width: actionTileWidth }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('SubmitExpense')}
         >
           <View style={[styles.tileIconCircle, { backgroundColor: colors.primaryLight }]}>
-            <Ionicons name="add" size={22} color={colors.primary} />
+            <Ionicons name="add" size={24} color={colors.primary} />
           </View>
-          <Text style={styles.tileTitle}>New Expense</Text>
-          <Text style={styles.tileDesc}>Submit claim & receipt</Text>
+          <View style={styles.tileTextWrap}>
+            <Text style={styles.tileTitle}>New Expense</Text>
+            <Text style={styles.tileDesc}>Submit claim & receipt</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionTile}
-          activeOpacity={0.7}
+          style={[styles.actionTile, { width: actionTileWidth }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('ExpensesTab')}
         >
           <View style={[styles.tileIconCircle, { backgroundColor: colors.warningLight }]}>
-            <Ionicons name="receipt-outline" size={20} color={colors.warning} />
+            <Ionicons name="receipt-outline" size={22} color={colors.warning} />
           </View>
-          <Text style={styles.tileTitle}>My Expenses</Text>
-          <Text style={styles.tileDesc}>Track reimbursements</Text>
+          <View style={styles.tileTextWrap}>
+            <Text style={styles.tileTitle}>My Expenses</Text>
+            <Text style={styles.tileDesc}>Track reimbursements</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionTile}
-          activeOpacity={0.7}
+          style={[styles.actionTile, { width: actionTileWidth }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('InvoicesTab')}
         >
           <View style={[styles.tileIconCircle, { backgroundColor: colors.infoLight }]}>
-            <Ionicons name="document-text-outline" size={20} color={colors.info} />
+            <Ionicons name="document-text-outline" size={22} color={colors.info} />
           </View>
-          <Text style={styles.tileTitle}>Invoices</Text>
-          <Text style={styles.tileDesc}>Receivables & bills</Text>
+          <View style={styles.tileTextWrap}>
+            <Text style={styles.tileTitle}>Invoices</Text>
+            <Text style={styles.tileDesc}>Client bills & payments</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionTile}
-          activeOpacity={0.7}
+          style={[styles.actionTile, { width: actionTileWidth }]}
+          activeOpacity={0.75}
           onPress={() => navigation.navigate('PayslipsTab')}
         >
           <View style={[styles.tileIconCircle, { backgroundColor: colors.successLight }]}>
-            <Ionicons name="wallet-outline" size={20} color={colors.success} />
+            <Ionicons name="wallet-outline" size={22} color={colors.success} />
           </View>
-          <Text style={styles.tileTitle}>My Payslips</Text>
-          <Text style={styles.tileDesc}>Salary slips & tax</Text>
+          <View style={styles.tileTextWrap}>
+            <Text style={styles.tileTitle}>My Payslips</Text>
+            <Text style={styles.tileDesc}>Salary breakdown & tax</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
+      {/* ==================== ROLE-BASED PORTALS ==================== */}
       {isHrAdmin && (
         <Card style={styles.hrBannerCard}>
           <TouchableOpacity
             style={styles.hrBannerTouchable}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => navigation.navigate('HRAdmin')}
           >
             <View style={styles.hrBannerIconWrap}>
-              <Ionicons name="people" size={24} color="#fff" />
+              <Ionicons name="people" size={22} color="#FFFFFF" />
             </View>
             <View style={styles.hrBannerInfo}>
               <Text style={styles.hrBannerTitle}>HR Administration Portal</Text>
@@ -230,18 +296,20 @@ export default function DashboardScreen({ navigation }) {
         <Card style={styles.reviewerCard}>
           <TouchableOpacity
             style={styles.reviewerHeader}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() =>
               navigation.navigate('ExpensesTab', {
                 initialFilter: 'SUBMITTED',
               })
             }
           >
-            <Ionicons name="shield-checkmark" size={24} color={colors.primary} style={{ marginRight: spacing.sm }} />
+            <View style={styles.reviewerIconCircle}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+            </View>
             <View style={styles.reviewerInfo}>
               <Text style={styles.reviewerTitle}>Admin Expense Review</Text>
               <Text style={styles.reviewerDesc}>
-                Filter and review claims across your scope
+                Filter and review claims across your team
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -254,6 +322,7 @@ export default function DashboardScreen({ navigation }) {
             >
               <Text style={styles.adminFilterBtnText}>Draft</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.adminFilterBtn, styles.adminFilterBtnWarning]}
               onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'SUBMITTED' })}
@@ -262,6 +331,7 @@ export default function DashboardScreen({ navigation }) {
                 Submitted ({stats.submittedCount})
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.adminFilterBtn, styles.adminFilterBtnPrimary]}
               onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'APPROVED' })}
@@ -270,6 +340,7 @@ export default function DashboardScreen({ navigation }) {
                 Approved
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.adminFilterBtn, styles.adminFilterBtnSuccess]}
               onPress={() => navigation.navigate('ExpensesTab', { initialFilter: 'PAID' })}
@@ -282,10 +353,12 @@ export default function DashboardScreen({ navigation }) {
         </Card>
       )}
 
+      {/* ==================== RECENT CLAIMS SECTION ==================== */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Recent Expense Claims</Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('ExpensesTab')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.viewAllText}>View All</Text>
         </TouchableOpacity>
@@ -295,13 +368,16 @@ export default function DashboardScreen({ navigation }) {
         <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       ) : recentClaims.length === 0 ? (
         <Card style={styles.emptyCard}>
-          <Ionicons name="document-text-outline" size={38} color={colors.textLight} style={{ marginBottom: spacing.sm }} />
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="document-text-outline" size={32} color={colors.textLight} />
+          </View>
           <Text style={styles.emptyText}>No recent expense claims</Text>
           <TouchableOpacity
             style={styles.createFirstBtn}
             onPress={() => navigation.navigate('SubmitExpense')}
           >
-            <Text style={styles.createFirstText}>+ Create your first expense</Text>
+            <Ionicons name="add" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
+            <Text style={styles.createFirstText}>Submit first expense</Text>
           </TouchableOpacity>
         </Card>
       ) : (
@@ -317,21 +393,25 @@ export default function DashboardScreen({ navigation }) {
           >
             <View style={styles.claimRowTop}>
               <View style={styles.claimInfo}>
-                <Text style={styles.claimMerchant}>
-                  {item.merchantName || item.description || 'Expense Claim'}
+                <Text style={styles.claimMerchant} numberOfLines={1}>
+                  {item.merchantName || item.purpose || item.description || 'Expense Claim'}
                 </Text>
-                <Text style={styles.claimCategory}>
-                  {item.category?.name || 'General Expense'} •{' '}
+                <Text style={styles.claimCategory} numberOfLines={1}>
+                  {item.category?.name || 'General Expense'}
                   {item.expenseDate
-                    ? new Date(item.expenseDate).toLocaleDateString()
-                    : 'Recent'}
+                    ? ` • ${new Date(item.expenseDate).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}`
+                    : ''}
                 </Text>
               </View>
+
               <View style={styles.claimAmountCol}>
                 <Text style={styles.claimAmount}>
                   ₹{Number(item.amount || item.totalAmount || 0).toLocaleString('en-IN')}
                 </Text>
-                <StatusBadge status={item.status} style={styles.claimBadge} />
+                <StatusBadge status={item.status} size="sm" style={styles.claimBadge} />
               </View>
             </View>
           </Card>
@@ -348,14 +428,20 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  tabletScrollContent: {
+    paddingHorizontal: spacing.xl,
+    maxWidth: 900,
+    alignSelf: 'center',
+    width: '100%',
   },
   headerCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.md + 2,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -364,156 +450,240 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    paddingRight: spacing.sm,
   },
   greeting: {
-    fontSize: 13,
+    fontSize: typography.sm,
     color: colors.textMuted,
+    fontWeight: '500',
   },
   userName: {
-    fontSize: 20,
+    fontSize: typography.xl,
     fontWeight: '800',
     color: colors.text,
+    letterSpacing: -0.3,
+    marginTop: 1,
   },
   roleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
+    flexWrap: 'wrap',
   },
   roleBadge: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  roleText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  deptText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginLeft: 6,
-  },
-  headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+  },
+  roleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+    marginRight: 5,
+  },
+  roleText: {
+    fontSize: typography.xs,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  deptText: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    marginLeft: 6,
+    fontWeight: '500',
   },
   avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.primaryGlow,
   },
   avatarLetter: {
     color: colors.textInverse,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: typography.lg,
+    fontWeight: '800',
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  metricsRowStacked: {
+    flexDirection: 'column',
+    gap: spacing.sm,
   },
   metricCard: {
-    flex: 1,
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.md - 2,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     borderLeftWidth: 4,
     ...shadows.sm,
   },
+  metricHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metricDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
   metricLabel: {
-    fontSize: 12,
+    fontSize: typography.xs,
     color: colors.textMuted,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metricValue: {
-    fontSize: 18,
+    fontSize: typography.lg,
     fontWeight: '800',
     color: colors.text,
     marginVertical: 4,
+    letterSpacing: -0.3,
   },
   metricSub: {
-    fontSize: 11,
+    fontSize: typography.xs,
     color: colors.textLight,
+    fontWeight: '500',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: typography.md,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
+    letterSpacing: -0.2,
+  },
+  viewAllText: {
+    fontSize: typography.sm,
+    fontWeight: '600',
+    color: colors.primary,
   },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
   actionTile: {
-    width: '48.5%',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.md - 2,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.sm,
   },
   tileIconCircle: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginRight: spacing.sm + 2,
   },
-  tileIcon: {
-    fontSize: 18,
+  tileTextWrap: {
+    flex: 1,
   },
   tileTitle: {
-    fontSize: 14,
+    fontSize: typography.base,
     fontWeight: '700',
     color: colors.text,
   },
   tileDesc: {
-    fontSize: 11,
+    fontSize: typography.xs,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 1,
+  },
+  hrBannerCard: {
+    backgroundColor: '#FAF5FF',
+    borderColor: '#E9D5FF',
+    marginBottom: spacing.md,
+    padding: spacing.sm + 2,
+  },
+  hrBannerTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hrBannerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm + 2,
+  },
+  hrBannerInfo: {
+    flex: 1,
+  },
+  hrBannerTitle: {
+    fontSize: typography.base,
+    fontWeight: '700',
+    color: colors.purpleText,
+  },
+  hrBannerSub: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    marginTop: 1,
   },
   reviewerCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primaryBorder,
     marginBottom: spacing.md,
+    padding: spacing.md,
   },
   reviewerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  reviewerIcon: {
-    fontSize: 22,
+  reviewerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.sm,
   },
   reviewerInfo: {
     flex: 1,
   },
   reviewerTitle: {
-    fontSize: 14,
+    fontSize: typography.base,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   reviewerDesc: {
-    fontSize: 12,
+    fontSize: typography.xs,
     color: colors.textMuted,
+    marginTop: 1,
   },
   adminFilterRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: spacing.md,
+    marginTop: spacing.sm + 4,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: '#DBEAFE',
@@ -542,7 +712,7 @@ const styles = StyleSheet.create({
     borderColor: '#86EFAC',
   },
   adminFilterBtnText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: colors.text,
   },
@@ -553,70 +723,66 @@ const styles = StyleSheet.create({
     color: '#3730A3',
   },
   adminFilterBtnTextSuccess: {
-    color: '#166534',
-  },
-  chevron: {
-    fontSize: 18,
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  viewAllText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '600',
+    color: '#065F46',
   },
   loader: {
-    marginVertical: spacing.lg,
+    marginVertical: spacing.xl,
   },
   emptyCard: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
-  emptyIcon: {
-    fontSize: 32,
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: typography.sm,
     color: colors.textMuted,
-    marginBottom: spacing.sm,
+    fontWeight: '500',
+    marginBottom: spacing.md,
   },
   createFirstBtn: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
     borderRadius: borderRadius.md,
+    ...shadows.sm,
   },
   createFirstText: {
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontSize: typography.sm,
+    fontWeight: '700',
   },
   claimCard: {
     marginBottom: spacing.sm,
+    padding: spacing.md - 2,
   },
   claimRowTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   claimInfo: {
     flex: 1,
     paddingRight: spacing.sm,
   },
   claimMerchant: {
-    fontSize: 15,
+    fontSize: typography.base,
     fontWeight: '700',
     color: colors.text,
   },
   claimCategory: {
-    fontSize: 12,
+    fontSize: typography.xs,
     color: colors.textMuted,
     marginTop: 2,
   },
@@ -624,43 +790,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   claimAmount: {
-    fontSize: 15,
+    fontSize: typography.md,
     fontWeight: '800',
     color: colors.text,
+    marginBottom: 4,
   },
   claimBadge: {
-    marginTop: 4,
-  },
-  hrBannerCard: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  hrBannerTouchable: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hrBannerIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  hrBannerInfo: {
-    flex: 1,
-  },
-  hrBannerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  hrBannerSub: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
+    alignSelf: 'flex-end',
   },
 });

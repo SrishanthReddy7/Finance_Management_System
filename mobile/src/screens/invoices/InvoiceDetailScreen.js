@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../components/theme';
@@ -16,6 +17,9 @@ import { unwrapError } from '../../api/unwrap';
 
 export default function InvoiceDetailScreen({ route }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const { invoiceId } = route.params;
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +66,7 @@ export default function InvoiceDetailScreen({ route }) {
       style={styles.container}
       contentContainerStyle={[
         styles.scrollContent,
+        isTablet && styles.tabletScrollContent,
         { paddingBottom: Math.max(insets.bottom, 20) + 40 },
       ]}
     >
@@ -188,6 +193,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  tabletScrollContent: {
+    maxWidth: 760,
+    alignSelf: 'center',
+    width: '100%',
   },
   centerContainer: {
     flex: 1,

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, shadows } from '../../components/theme';
@@ -17,6 +18,9 @@ import { testConnection } from '../../api/client';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const { user, logout, serverUrl, changeServerUrl } = useAuth();
 
   const isHrAdmin =
@@ -57,7 +61,10 @@ export default function ProfileScreen({ navigation }) {
   const employee = user?.employee;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.scrollContent, isTablet && styles.tabletScrollContent]}
+    >
       <Card style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -287,6 +294,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  tabletScrollContent: {
+    maxWidth: 640,
+    alignSelf: 'center',
+    width: '100%',
   },
   profileCard: {
     alignItems: 'center',

@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,9 @@ const PAYMENT_METHODS = ['UPI', 'Card', 'Cash', 'Bank Transfer'];
 
 export default function SubmitExpenseScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -225,6 +229,7 @@ export default function SubmitExpenseScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
+          isTablet && styles.tabletScrollContent,
           { paddingBottom: Math.max(insets.bottom, 20) + 40 },
         ]}
         keyboardShouldPersistTaps="handled"
@@ -243,6 +248,9 @@ export default function SubmitExpenseScreen({ navigation }) {
             if (errors.merchantName) setErrors({ ...errors, merchantName: null });
           }}
           error={errors.merchantName}
+          leadingIcon={
+            <Ionicons name="storefront-outline" size={18} color={colors.textMuted} />
+          }
         />
 
         <Input
@@ -255,6 +263,9 @@ export default function SubmitExpenseScreen({ navigation }) {
           }}
           keyboardType="numeric"
           error={errors.amount}
+          leadingIcon={
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textMuted }}>₹</Text>
+          }
         />
 
         <Input
@@ -262,6 +273,9 @@ export default function SubmitExpenseScreen({ navigation }) {
           placeholder="2026-10-04"
           value={expenseDate}
           onChangeText={setExpenseDate}
+          leadingIcon={
+            <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+          }
         />
 
         <Text style={styles.fieldLabel}>Category *</Text>
@@ -450,6 +464,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  tabletScrollContent: {
+    maxWidth: 640,
+    alignSelf: 'center',
+    width: '100%',
   },
   screenTitle: {
     fontSize: 22,

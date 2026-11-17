@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../components/theme';
 import StatusBadge from '../../components/StatusBadge';
@@ -26,11 +27,20 @@ const FILTER_OPTIONS = [
 ];
 
 export default function ExpensesListScreen({ navigation, route }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const initialFilter = route?.params?.initialFilter || 'ALL';
   const [selectedStatus, setSelectedStatus] = useState(initialFilter);
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Compute total filtered amount
+  const totalAmount = claims.reduce(
+    (sum, c) => sum + Number(c.amount || c.totalAmount || 0),
+    0
+  );
 
   useEffect(() => {
     if (route?.params?.initialFilter) {
@@ -102,6 +112,12 @@ export default function ExpensesListScreen({ navigation, route }) {
                 })
               : 'No date'}
           </Text>
+          {(item.receipts?.length > 0 || item.receiptUrl || item.receiptImage) && (
+            <View style={styles.receiptTag}>
+              <Ionicons name="attach" size={12} color={colors.primary} />
+              <Text style={styles.receiptTagText}>Receipt</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.amountText}>
           ₹{Number(item.amount || item.totalAmount || 0).toLocaleString('en-IN')}
@@ -159,6 +175,15 @@ export default function ExpensesListScreen({ navigation, route }) {
         </ScrollView>
       </View>
 
+      <View style={styles.summaryBar}>
+        <Text style={styles.summaryText}>
+          {claims.length} {claims.length === 1 ? 'claim' : 'claims'}
+        </Text>
+        <Text style={styles.summaryAmount}>
+          Total: <Text style={styles.summaryAmountValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+        </Text>
+      </View>
+
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -169,7 +194,7 @@ export default function ExpensesListScreen({ navigation, route }) {
           data={claims}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, isTablet && styles.tabletListContent]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -234,9 +259,37 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: colors.textInverse,
   },
+  summaryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    backgroundColor: colors.surfaceHighlight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  summaryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  summaryAmount: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  summaryAmountValue: {
+    fontWeight: '800',
+    color: colors.text,
+  },
   listContent: {
     padding: spacing.md,
-    paddingBottom: 80,
+    paddingBottom: 88,
+  },
+  tabletListContent: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   claimCard: {
     marginBottom: spacing.sm,
@@ -291,6 +344,21 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: colors.textMuted,
+  },
+  receiptTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: borderRadius.sm,
+    marginLeft: 8,
+  },
+  receiptTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    marginLeft: 2,
   },
   amountText: {
     fontSize: 16,

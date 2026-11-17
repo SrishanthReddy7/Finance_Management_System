@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,8 +46,11 @@ function TabBarIcon({ name, focused }) {
 function BottomTabs() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 10) : insets.bottom || 12;
-  const tabHeight = 60 + bottomPadding;
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
+  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 8) : insets.bottom || 10;
+  const tabHeight = (isTablet ? 68 : 58) + bottomPadding;
 
   const isHrAdmin =
     user?.roleName === 'HR Admin' ||
@@ -58,16 +61,17 @@ function BottomTabs() {
       screenOptions={({ navigation }) => ({
         headerStyle: {
           backgroundColor: colors.surface,
-          shadowColor: '#000',
+          shadowColor: '#0F172A',
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.05,
-          shadowRadius: 2,
+          shadowRadius: 3,
           elevation: 2,
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 18,
+          fontWeight: '800',
+          fontSize: isTablet ? 20 : 18,
+          letterSpacing: -0.3,
         },
         headerRight: () => (
           <View style={{ marginRight: 16 }}>
@@ -81,18 +85,19 @@ function BottomTabs() {
           borderTopColor: colors.border,
           borderTopWidth: 1,
           height: tabHeight,
-          paddingTop: 6,
+          paddingTop: 5,
           paddingBottom: bottomPadding,
           elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 6,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 2,
+          fontSize: isTablet ? 12 : 10.5,
+          fontWeight: '700',
+          marginTop: 1,
+          letterSpacing: 0.1,
         },
       })}
     >

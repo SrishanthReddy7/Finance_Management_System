@@ -10,9 +10,12 @@ export const STORAGE_KEYS = {
 
 import Constants from 'expo-constants';
 
+// Current local development host LAN IP
+export const CURRENT_DEV_LAN_IP = '192.168.1.34';
+
 // Default backend URL: automatically detects computer IP from Expo Go connection
 export function getDefaultApiUrl() {
-  // If running in Expo Go, hostUri contains the computer's LAN IP (e.g. 192.168.31.138:8081)
+  // If running in Expo Go, hostUri contains the computer's LAN IP (e.g. 192.168.1.34:8081)
   const hostUri =
     Constants.expoConfig?.hostUri ||
     Constants.manifest2?.extra?.expoGo?.debuggerHost ||
@@ -26,11 +29,11 @@ export function getDefaultApiUrl() {
   }
 
   if (Platform.OS === 'android') {
-    // Current LAN IP fallback or Android emulator 10.0.2.2 fallback
-    return 'http://192.168.29.16:5000/api/v1';
+    // Current LAN IP fallback
+    return `http://${CURRENT_DEV_LAN_IP}:5000/api/v1`;
   }
   // Physical device LAN default or localhost fallback
-  return 'http://192.168.29.16:5000/api/v1';
+  return `http://${CURRENT_DEV_LAN_IP}:5000/api/v1`;
 }
 
 export async function getActiveApiUrl() {
@@ -39,12 +42,12 @@ export async function getActiveApiUrl() {
     const saved = await AsyncStorage.getItem(STORAGE_KEYS.SERVER_URL);
     if (saved && saved.trim()) {
       const trimmed = saved.trim();
-      // Check if saved is from an old subnet (e.g. 192.168.31.x while now on 192.168.29.x)
+      // Check if saved is from an old subnet (e.g. 192.168.29.x while now on 192.168.1.x)
       const hostUri =
         Constants.expoConfig?.hostUri ||
         Constants.manifest2?.extra?.expoGo?.debuggerHost ||
         Constants.manifest?.debuggerHost;
-      const detectedIp = hostUri ? hostUri.split(':')[0] : '192.168.29.16';
+      const detectedIp = hostUri ? hostUri.split(':')[0] : CURRENT_DEV_LAN_IP;
 
       if (detectedIp && detectedIp !== 'localhost' && detectedIp !== '127.0.0.1') {
         if (trimmed.includes('192.168.') && !trimmed.includes(detectedIp)) {

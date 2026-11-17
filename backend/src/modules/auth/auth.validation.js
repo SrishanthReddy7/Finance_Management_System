@@ -1,10 +1,15 @@
 import { z } from "zod";
 
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  otp: z.string().optional(),
-});
+export const loginSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8).optional(),
+    otp: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.password || data.otp), {
+    message: "Either password or OTP must be provided.",
+    path: ["password"],
+  });
 
 export const verifyOtpSchema = z.object({
   email: z.string().email(),

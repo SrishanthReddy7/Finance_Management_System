@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../components/theme';
 import StatusBadge from '../../components/StatusBadge';
@@ -25,6 +26,9 @@ const INVOICE_FILTERS = [
 ];
 
 export default function InvoicesListScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +148,7 @@ export default function InvoicesListScreen({ navigation }) {
           data={invoices}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, isTablet && styles.tabletListContent]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -212,6 +216,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+  },
+  tabletListContent: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   invoiceCard: {
     marginBottom: spacing.sm,

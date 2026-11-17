@@ -13,6 +13,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../components/theme';
 import StatusBadge from '../../components/StatusBadge';
@@ -27,6 +28,9 @@ import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function HRAdminScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const { user } = useAuth();
 
   const [employees, setEmployees] = useState([]);
@@ -423,7 +427,7 @@ export default function HRAdminScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderEmployeeCard}
           ListHeaderComponent={renderHeader}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, isTablet && styles.tabletListContent]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -599,6 +603,11 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.md,
     paddingBottom: spacing.xxl,
+  },
+  tabletListContent: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   headerContainer: {
     marginBottom: spacing.md,

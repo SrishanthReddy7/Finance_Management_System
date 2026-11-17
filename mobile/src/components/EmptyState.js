@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from './theme';
+import { colors, spacing, borderRadius, typography } from './theme';
 import Button from './Button';
 
 export default function EmptyState({
@@ -14,7 +14,7 @@ export default function EmptyState({
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        {icon ? icon : <Ionicons name="folder-open-outline" size={30} color={colors.textMuted} />}
+        {icon ? icon : <Ionicons name="folder-open-outline" size={32} color={colors.textLight} />}
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
@@ -23,6 +23,7 @@ export default function EmptyState({
           title={actionTitle}
           onPress={onAction}
           variant="primary"
+          size="md"
           style={styles.actionBtn}
         />
       )}
@@ -34,34 +35,35 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.xl + 8,
     paddingHorizontal: spacing.lg,
   },
   iconCircle: {
-    width: 64,
-    height: 64,
+    width: 68,
+    height: 68,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  defaultIconText: {
-    fontSize: 28,
-  },
   title: {
-    fontSize: 16,
+    fontSize: typography.md,
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.xs,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   message: {
-    fontSize: 14,
+    fontSize: typography.sm,
     color: colors.textMuted,
     textAlign: 'center',
     marginBottom: spacing.lg,
     lineHeight: 20,
+    maxWidth: 320,
   },
   actionBtn: {
     minWidth: 160,
